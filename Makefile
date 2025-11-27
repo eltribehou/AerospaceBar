@@ -1,4 +1,4 @@
-.PHONY: build run clean
+.PHONY: build run clean install
 
 # Default target
 all: run
@@ -10,6 +10,10 @@ build:
 # Run the project (builds if necessary)
 run: build
 	./.build/release/AerospaceMenubar
+
+# Install the executable to /Applications
+install: build
+	cp ./.build/release/AerospaceMenubar /Applications/AerospaceMenubar
 
 # Clean build artifacts
 clean:
