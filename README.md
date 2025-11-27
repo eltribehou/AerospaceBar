@@ -7,6 +7,7 @@ A custom menubar for macOS that displays and allows switching between Hyprspace 
 - Custom menubar window at the top of the screen
 - Displays only workspaces that have apps running in them
 - Shows app icons for applications in each workspace (up to 3 icons, with a "+N" counter for additional apps)
+- Fullscreen apps are shown with larger icons (18x18) compared to windowed apps (14x14)
 - Click any workspace to switch to it
 - Current workspace is highlighted in blue
 - Fast auto-refresh (300ms) for responsive workspace switching
@@ -71,6 +72,7 @@ To make it start automatically:
 - `MenuBarView.swift` - SwiftUI view for the menubar UI
 - `AerospaceClient.swift` - Communicates with the hyprspace CLI
 - `AppIconHelper.swift` - Fetches and caches app icons using NSWorkspace
+- `AppInfo.swift` - Data structure holding app name and fullscreen status
 
 ## How It Works
 
@@ -79,9 +81,9 @@ The app creates a borderless window positioned at the top of the screen:
 - **SwiftUI** - Modern UI showing workspace buttons with app icons
 - **Hyprspace CLI** - Queries workspaces and apps using:
   - `list-workspaces --focused` - Get current workspace
-  - `list-windows --all --format "%{workspace} %{app-name}"` - Get apps per workspace (determines which workspaces to show)
+  - `list-windows --all --format "%{workspace}|%{app-name}|%{window-is-fullscreen}"` - Get apps per workspace with fullscreen status (determines which workspaces to show)
   - `workspace <name>` - Switch to a workspace
 - **NSWorkspace** - Finds and loads app icons from the system
 - A fast 300ms timer keeps the workspace list and app icons up to date
 
-The menubar shows only workspaces with running apps as clickable buttons, each displaying small app icons (up to 3 per workspace, with "+N" for additional apps). The current workspace is highlighted in blue, and you can click any workspace to switch to it.
+The menubar shows only workspaces with running apps as clickable buttons, each displaying app icons (up to 3 per workspace, with "+N" for additional apps). Fullscreen apps are shown with larger 18x18 icons while windowed apps use 14x14 icons, making it easy to see which apps are in fullscreen mode. The current workspace is highlighted in blue, and you can click any workspace to switch to it.

@@ -6,7 +6,7 @@ class MenuBarManager: ObservableObject {
     private let aerospaceClient = AerospaceClient()
     @Published var workspaces: [String] = []
     @Published var currentWorkspace: String?
-    @Published var appsPerWorkspace: [String: [String]] = [:]
+    @Published var appsPerWorkspace: [String: [AppInfo]] = [:]
 
     func setup() {
         // Get initial workspaces

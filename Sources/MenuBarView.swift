@@ -4,7 +4,7 @@ import AppKit
 struct MenuBarView: View {
     let workspaces: [String]
     let currentWorkspace: String?
-    let appsPerWorkspace: [String: [String]]
+    let appsPerWorkspace: [String: [AppInfo]]
     let onWorkspaceClick: (String) -> Void
     let onQuit: () -> Void
 
@@ -51,7 +51,7 @@ struct MenuBarView: View {
 struct WorkspaceButton: View {
     let workspace: String
     let isCurrent: Bool
-    let apps: [String]
+    let apps: [AppInfo]
     let onClick: () -> Void
 
     @State private var isHovering = false
@@ -66,8 +66,8 @@ struct WorkspaceButton: View {
                 // Show app icons (limit to first 3)
                 if !apps.isEmpty {
                     HStack(spacing: 2) {
-                        ForEach(Array(apps.prefix(3)), id: \.self) { appName in
-                            AppIconView(appName: appName)
+                        ForEach(Array(apps.prefix(3)), id: \.self) { appInfo in
+                            AppIconView(appName: appInfo.name, isFullscreen: appInfo.isFullscreen)
                         }
 
                         // Show count if more than 3 apps
@@ -110,13 +110,18 @@ struct WorkspaceButton: View {
 
 struct AppIconView: View {
     let appName: String
+    let isFullscreen: Bool
 
     var body: some View {
         if let nsImage = AppIconHelper.shared.getIcon(forAppName: appName) {
             Image(nsImage: nsImage)
                 .resizable()
-                .frame(width: 14, height: 14)
+                .frame(width: iconSize, height: iconSize)
                 .cornerRadius(2)
         }
+    }
+
+    private var iconSize: CGFloat {
+        isFullscreen ? 18 : 14
     }
 }
