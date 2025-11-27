@@ -5,7 +5,7 @@ A custom menubar for macOS that displays and allows switching between Hyprspace 
 ## Features
 
 - Custom menubar window at the top of the screen
-- Displays only workspaces that have apps running in them
+- Displays only workspaces that have apps running in them (current workspace always shown, even if empty)
 - Shows app icons for applications in each workspace (up to 3 icons, with a "+N" counter for additional apps)
 - Fullscreen apps are indicated with a small green badge overlay on their icons
 - Click any workspace to switch to it
@@ -86,4 +86,4 @@ The app creates a borderless window positioned at the top of the screen:
 - **NSWorkspace** - Finds and loads app icons from the system
 - A fast 300ms timer keeps the workspace list and app icons up to date
 
-The menubar shows only workspaces with running apps as clickable buttons, each displaying app icons (up to 3 per workspace, with "+N" for additional apps). Fullscreen apps are indicated with a small green badge in the top-right corner of their icon. The current workspace is highlighted in blue, and you can click any workspace to switch to it.
+The menubar shows workspaces with running apps as clickable buttons, each displaying app icons (up to 3 per workspace, with "+N" for additional apps). The current workspace is always shown even if it has no apps, and is highlighted in blue. Fullscreen apps are indicated with a small green badge in the top-right corner of their icon. You can click any workspace to switch to it.

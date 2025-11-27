@@ -65,10 +65,18 @@ class MenuBarManager: ObservableObject {
 
     private func refreshWorkspaces() {
         currentWorkspace = aerospaceClient.getCurrentWorkspace()
-        appsPerWorkspace = aerospaceClient.getAppsPerWorkspace()
+        var apps = aerospaceClient.getAppsPerWorkspace()
 
-        // Only show workspaces that have apps running in them
-        workspaces = Array(appsPerWorkspace.keys).sorted()
+        // Always include current workspace, even if empty
+        if let current = currentWorkspace, apps[current] == nil {
+            apps[current] = []
+        }
+
+        // Assign the complete dictionary in one go
+        appsPerWorkspace = apps
+
+        // Build workspace list
+        workspaces = Array(apps.keys).sorted()
     }
 
     private func updateWindowContent() {
