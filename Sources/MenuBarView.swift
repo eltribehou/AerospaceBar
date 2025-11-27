@@ -101,9 +101,9 @@ struct WorkspaceButton: View {
         if isCurrent {
             return Color.blue.opacity(0.6)
         } else if isHovering {
-            return Color.white.opacity(0.1)
+            return Color.white.opacity(0.2)
         } else {
-            return Color.clear
+            return Color.white.opacity(0.1)
         }
     }
 }
