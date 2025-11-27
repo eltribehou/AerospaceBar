@@ -9,7 +9,7 @@ A custom menubar for macOS that displays and allows switching between Hyprspace 
 - Shows app icons for applications in each workspace (up to 3 icons, with a "+N" counter for additional apps)
 - Click any workspace to switch to it
 - Current workspace is highlighted in blue
-- Auto-refreshes every 2 seconds
+- Fast auto-refresh (300ms) for responsive workspace switching
 - Runs without a dock icon
 - Always visible across all spaces
 
@@ -82,6 +82,6 @@ The app creates a borderless window positioned at the top of the screen:
   - `list-windows --all --format "%{workspace} %{app-name}"` - Get apps per workspace (determines which workspaces to show)
   - `workspace <name>` - Switch to a workspace
 - **NSWorkspace** - Finds and loads app icons from the system
-- A 2-second timer keeps the workspace list and app icons up to date
+- A fast 300ms timer keeps the workspace list and app icons up to date
 
 The menubar shows only workspaces with running apps as clickable buttons, each displaying small app icons (up to 3 per workspace, with "+N" for additional apps). The current workspace is highlighted in blue, and you can click any workspace to switch to it.
