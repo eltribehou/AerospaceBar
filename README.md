@@ -5,9 +5,10 @@ A custom menubar for macOS that displays and allows switching between Hyprspace 
 ## Features
 
 - Custom menubar window at the top of the screen
-- Displays all non-hidden workspaces in a horizontal bar
+- Displays only workspaces that have apps running in them
+- Shows app icons for applications in each workspace (up to 3 icons, with a "+N" counter for additional apps)
 - Click any workspace to switch to it
-- Current workspace is highlighted
+- Current workspace is highlighted in blue
 - Auto-refreshes every 2 seconds
 - Runs without a dock icon
 - Always visible across all spaces
@@ -69,13 +70,18 @@ To make it start automatically:
 - `MenuBarManager.swift` - Creates and manages the custom menubar window
 - `MenuBarView.swift` - SwiftUI view for the menubar UI
 - `AerospaceClient.swift` - Communicates with the hyprspace CLI
+- `AppIconHelper.swift` - Fetches and caches app icons using NSWorkspace
 
 ## How It Works
 
 The app creates a borderless window positioned at the top of the screen:
 - **AppKit NSWindow** - Borderless window positioned at screen top, always on top
-- **SwiftUI** - Modern UI showing workspace buttons
-- **Hyprspace CLI** - Queries workspaces (`list-workspaces`) and switches between them (`workspace <name>`)
-- A 2-second timer keeps the workspace list up to date
+- **SwiftUI** - Modern UI showing workspace buttons with app icons
+- **Hyprspace CLI** - Queries workspaces and apps using:
+  - `list-workspaces --focused` - Get current workspace
+  - `list-windows --all --format "%{workspace} %{app-name}"` - Get apps per workspace (determines which workspaces to show)
+  - `workspace <name>` - Switch to a workspace
+- **NSWorkspace** - Finds and loads app icons from the system
+- A 2-second timer keeps the workspace list and app icons up to date
 
-The menubar shows all workspaces as clickable buttons. The current workspace is highlighted in blue, and you can click any workspace to switch to it.
+The menubar shows only workspaces with running apps as clickable buttons, each displaying small app icons (up to 3 per workspace, with "+N" for additional apps). The current workspace is highlighted in blue, and you can click any workspace to switch to it.

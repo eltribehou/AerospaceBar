@@ -6,6 +6,7 @@ class MenuBarManager: ObservableObject {
     private let aerospaceClient = AerospaceClient()
     @Published var workspaces: [String] = []
     @Published var currentWorkspace: String?
+    @Published var appsPerWorkspace: [String: [String]] = [:]
 
     func setup() {
         // Get initial workspaces
@@ -15,6 +16,7 @@ class MenuBarManager: ObservableObject {
         let contentView = MenuBarView(
             workspaces: workspaces,
             currentWorkspace: currentWorkspace,
+            appsPerWorkspace: appsPerWorkspace,
             onWorkspaceClick: { [weak self] workspace in
                 self?.switchToWorkspace(workspace)
             },
@@ -62,14 +64,18 @@ class MenuBarManager: ObservableObject {
     }
 
     private func refreshWorkspaces() {
-        workspaces = aerospaceClient.getWorkspaces()
         currentWorkspace = aerospaceClient.getCurrentWorkspace()
+        appsPerWorkspace = aerospaceClient.getAppsPerWorkspace()
+
+        // Only show workspaces that have apps running in them
+        workspaces = Array(appsPerWorkspace.keys).sorted()
     }
 
     private func updateWindowContent() {
         let contentView = MenuBarView(
             workspaces: workspaces,
             currentWorkspace: currentWorkspace,
+            appsPerWorkspace: appsPerWorkspace,
             onWorkspaceClick: { [weak self] workspace in
                 self?.switchToWorkspace(workspace)
             },

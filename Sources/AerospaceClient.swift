@@ -24,6 +24,38 @@ class AerospaceClient {
         _ = runCommand(arguments: ["workspace", workspace])
     }
 
+    /// Get apps grouped by workspace
+    /// Returns a dictionary mapping workspace names to arrays of app names
+    func getAppsPerWorkspace() -> [String: [String]] {
+        let output = runCommand(arguments: ["list-windows", "--all", "--format", "%{workspace} %{app-name}"])
+
+        var appsPerWorkspace: [String: [String]] = [:]
+
+        let lines = output
+            .components(separatedBy: .newlines)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+
+        for line in lines {
+            let components = line.split(separator: " ", maxSplits: 1).map { String($0) }
+            guard components.count == 2 else { continue }
+
+            let workspace = components[0]
+            let appName = components[1]
+
+            if appsPerWorkspace[workspace] == nil {
+                appsPerWorkspace[workspace] = []
+            }
+
+            // Avoid duplicates
+            if !appsPerWorkspace[workspace]!.contains(appName) {
+                appsPerWorkspace[workspace]!.append(appName)
+            }
+        }
+
+        return appsPerWorkspace
+    }
+
     /// Run aerospace command and return output
     private func runCommand(arguments: [String]) -> String {
         let process = Process()

@@ -1,8 +1,10 @@
 import SwiftUI
+import AppKit
 
 struct MenuBarView: View {
     let workspaces: [String]
     let currentWorkspace: String?
+    let appsPerWorkspace: [String: [String]]
     let onWorkspaceClick: (String) -> Void
     let onQuit: () -> Void
 
@@ -14,6 +16,7 @@ struct MenuBarView: View {
                     WorkspaceButton(
                         workspace: workspace,
                         isCurrent: workspace == currentWorkspace,
+                        apps: appsPerWorkspace[workspace] ?? [],
                         onClick: {
                             onWorkspaceClick(workspace)
                         }
@@ -48,21 +51,40 @@ struct MenuBarView: View {
 struct WorkspaceButton: View {
     let workspace: String
     let isCurrent: Bool
+    let apps: [String]
     let onClick: () -> Void
 
     @State private var isHovering = false
 
     var body: some View {
         Button(action: onClick) {
-            Text(workspace)
-                .font(.system(size: 12, weight: isCurrent ? .bold : .regular))
-                .foregroundColor(isCurrent ? .white : .white.opacity(0.7))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 2)
-                .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(backgroundColor)
-                )
+            HStack(spacing: 4) {
+                Text(workspace)
+                    .font(.system(size: 12, weight: isCurrent ? .bold : .regular))
+                    .foregroundColor(isCurrent ? .white : .white.opacity(0.7))
+
+                // Show app icons (limit to first 3)
+                if !apps.isEmpty {
+                    HStack(spacing: 2) {
+                        ForEach(Array(apps.prefix(3)), id: \.self) { appName in
+                            AppIconView(appName: appName)
+                        }
+
+                        // Show count if more than 3 apps
+                        if apps.count > 3 {
+                            Text("+\(apps.count - 3)")
+                                .font(.system(size: 8))
+                                .foregroundColor(.white.opacity(0.5))
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
+            .background(
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(backgroundColor)
+            )
         }
         .buttonStyle(PlainButtonStyle())
         .onHover { hovering in
@@ -82,6 +104,19 @@ struct WorkspaceButton: View {
             return Color.white.opacity(0.1)
         } else {
             return Color.clear
+        }
+    }
+}
+
+struct AppIconView: View {
+    let appName: String
+
+    var body: some View {
+        if let nsImage = AppIconHelper.shared.getIcon(forAppName: appName) {
+            Image(nsImage: nsImage)
+                .resizable()
+                .frame(width: 14, height: 14)
+                .cornerRadius(2)
         }
     }
 }
