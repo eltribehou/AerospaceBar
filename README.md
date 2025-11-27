@@ -16,9 +16,6 @@ A custom menubar for macOS that displays and allows switching between Hyprspace 
 - Runs without a dock icon
 - Always visible across all spaces
 - Appears below the macOS menubar when it's shown (doesn't block access to system menu)
-- Multi-display support: shows on all connected monitors
-- Automatically adapts when displays are connected/disconnected
-- Notch-aware: automatically positions correctly on displays with notches (MacBook Pro 14"/16")
 
 ## Requirements
 
