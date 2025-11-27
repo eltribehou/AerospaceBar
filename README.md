@@ -11,6 +11,7 @@ A custom menubar for macOS that displays and allows switching between Hyprspace 
 - Click any workspace to switch to it
 - Current workspace is highlighted in blue
 - Fast auto-refresh (300ms) for responsive workspace switching
+- Clock display (24-hour format) on the right side
 - Runs without a dock icon
 - Always visible across all spaces
 

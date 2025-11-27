@@ -27,21 +27,25 @@ struct MenuBarView: View {
 
             Spacer()
 
-            // Quit button on the right
-            Button(action: onQuit) {
-                Text("Quit")
-                    .font(.system(size: 12))
-                    .foregroundColor(.white.opacity(0.7))
-            }
-            .buttonStyle(PlainButtonStyle())
-            .padding(.trailing, 8)
-            .onHover { hovering in
-                if hovering {
-                    NSCursor.pointingHand.push()
-                } else {
-                    NSCursor.pop()
+            // Clock and Quit button on the right
+            HStack(spacing: 12) {
+                ClockView()
+
+                Button(action: onQuit) {
+                    Text("Quit")
+                        .font(.system(size: 12))
+                        .foregroundColor(.white.opacity(0.7))
+                }
+                .buttonStyle(PlainButtonStyle())
+                .onHover { hovering in
+                    if hovering {
+                        NSCursor.pointingHand.push()
+                    } else {
+                        NSCursor.pop()
+                    }
                 }
             }
+            .padding(.trailing, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(white: 0.1, opacity: 0.95))
@@ -136,5 +140,26 @@ struct AppIconView: View {
                 .offset(x: 2, y: -2)
             }
         }
+    }
+}
+
+struct ClockView: View {
+    @State private var currentTime = Date()
+
+    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+
+    var body: some View {
+        Text(timeString)
+            .font(.system(size: 12, weight: .regular))
+            .foregroundColor(.white.opacity(0.9))
+            .onReceive(timer) { newTime in
+                currentTime = newTime
+            }
+    }
+
+    private var timeString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm"
+        return formatter.string(from: currentTime)
     }
 }
