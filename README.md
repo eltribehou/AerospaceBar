@@ -1,0 +1,81 @@
+# Aerospace Menubar
+
+A custom menubar for macOS that displays and allows switching between Hyprspace workspaces. Designed to replace the native macOS menubar when using the Aerospace window manager.
+
+## Features
+
+- Custom menubar window at the top of the screen
+- Displays all non-hidden workspaces in a horizontal bar
+- Click any workspace to switch to it
+- Current workspace is highlighted
+- Auto-refreshes every 2 seconds
+- Runs without a dock icon
+- Always visible across all spaces
+
+## Requirements
+
+- macOS 13.0+
+- Swift 5.9+
+- Hyprspace installed at `/usr/local/bin/hyprspace`
+
+## Building
+
+Using the Makefile:
+
+```bash
+make build
+```
+
+Or directly with Swift:
+
+```bash
+swift build -c release
+```
+
+The built binary will be at `.build/release/AerospaceMenubar`
+
+## Running
+
+Using the Makefile (builds if necessary):
+
+```bash
+make run
+```
+
+Or run the binary directly:
+
+```bash
+.build/release/AerospaceMenubar
+```
+
+Or run directly during development:
+
+```bash
+swift run
+```
+
+## Installation
+
+To make it start automatically:
+
+1. Build the release binary
+2. Copy it to a permanent location (e.g., `~/bin/` or `/usr/local/bin/`)
+3. Add it to your login items in System Settings
+
+## Project Structure
+
+- `main.swift` - Entry point, starts the NSApplication
+- `AppDelegate.swift` - Handles app lifecycle
+- `MenuBarManager.swift` - Creates and manages the custom menubar window
+- `MenuBarView.swift` - SwiftUI view for the menubar UI
+- `AerospaceClient.swift` - Communicates with the hyprspace CLI
+
+## How It Works
+
+The app creates a borderless window positioned at the top of the screen:
+- **AppKit NSWindow** - Borderless window positioned at screen top, always on top
+- **SwiftUI** - Modern UI showing workspace buttons
+- **Hyprspace CLI** - Queries workspaces (`list-workspaces`) and switches between them (`workspace <name>`)
+- A 2-second timer keeps the workspace list up to date
+
+The menubar shows all workspaces as clickable buttons. The current workspace is highlighted in blue, and you can click any workspace to switch to it.
