@@ -24,13 +24,12 @@ class AerospaceClient {
         _ = runCommand(arguments: ["workspace", workspace])
     }
 
-    /// Get apps grouped by workspace with fullscreen status
-    /// Returns a dictionary mapping workspace names to arrays of AppInfo
-    func getAppsPerWorkspace() -> [String: [AppInfo]] {
-        let output = runCommand(arguments: ["list-windows", "--all", "--format", "%{workspace}|%{app-name}|%{window-is-fullscreen}"])
+    /// Get apps grouped by workspace
+    /// Returns a dictionary mapping workspace names to arrays of app names
+    func getAppsPerWorkspace() -> [String: [String]] {
+        let output = runCommand(arguments: ["list-windows", "--all", "--format", "%{workspace} %{app-name}"])
 
-        var appsPerWorkspace: [String: [AppInfo]] = [:]
-        var fullscreenStatus: [String: [String: Bool]] = [:] // workspace -> appName -> isFullscreen
+        var appsPerWorkspace: [String: [String]] = [:]
 
         let lines = output
             .components(separatedBy: .newlines)
@@ -38,31 +37,20 @@ class AerospaceClient {
             .filter { !$0.isEmpty }
 
         for line in lines {
-            let components = line.split(separator: "|").map { String($0) }
-            guard components.count == 3 else { continue }
+            let components = line.split(separator: " ", maxSplits: 1).map { String($0) }
+            guard components.count == 2 else { continue }
 
             let workspace = components[0]
             let appName = components[1]
-            let isFullscreenStr = components[2].lowercased()
-            let isFullscreen = (isFullscreenStr == "true" || isFullscreenStr == "yes" || isFullscreenStr == "1")
 
-            // Track fullscreen status - if ANY window of an app is fullscreen, mark the app as fullscreen
-            if fullscreenStatus[workspace] == nil {
-                fullscreenStatus[workspace] = [:]
+            if appsPerWorkspace[workspace] == nil {
+                appsPerWorkspace[workspace] = []
             }
-            if fullscreenStatus[workspace]![appName] == nil {
-                fullscreenStatus[workspace]![appName] = isFullscreen
-            } else {
-                // If any window is fullscreen, mark app as fullscreen
-                fullscreenStatus[workspace]![appName] = fullscreenStatus[workspace]![appName]! || isFullscreen
-            }
-        }
 
-        // Convert to AppInfo array
-        for (workspace, apps) in fullscreenStatus {
-            appsPerWorkspace[workspace] = apps.map { appName, isFullscreen in
-                AppInfo(name: appName, isFullscreen: isFullscreen)
-            }.sorted { $0.name < $1.name }
+            // Avoid duplicates
+            if !appsPerWorkspace[workspace]!.contains(appName) {
+                appsPerWorkspace[workspace]!.append(appName)
+            }
         }
 
         return appsPerWorkspace
