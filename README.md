@@ -15,6 +15,7 @@ A custom menubar for macOS that displays and allows switching between Hyprspace 
 - Right-click context menu for quitting the app
 - Runs without a dock icon
 - Always visible across all spaces
+- Appears below the macOS menubar when it's shown (doesn't block access to system menu)
 
 ## Requirements
 

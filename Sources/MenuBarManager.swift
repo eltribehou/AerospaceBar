@@ -47,7 +47,7 @@ class MenuBarManager: ObservableObject {
         window?.contentView = hostingView
         window?.backgroundColor = NSColor(white: 0.1, alpha: 0.95)
         window?.isOpaque = false
-        window?.level = .statusBar
+        window?.level = .floating
         window?.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         window?.makeKeyAndOrderFront(nil)
 
