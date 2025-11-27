@@ -27,28 +27,17 @@ struct MenuBarView: View {
 
             Spacer()
 
-            // Clock and Quit button on the right
-            HStack(spacing: 12) {
-                ClockView()
-
-                Button(action: onQuit) {
-                    Text("Quit")
-                        .font(.system(size: 12))
-                        .foregroundColor(.white.opacity(0.7))
-                }
-                .buttonStyle(PlainButtonStyle())
-                .onHover { hovering in
-                    if hovering {
-                        NSCursor.pointingHand.push()
-                    } else {
-                        NSCursor.pop()
-                    }
-                }
-            }
-            .padding(.trailing, 8)
+            // Clock on the right
+            ClockView()
+                .padding(.trailing, 8)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(white: 0.1, opacity: 0.95))
+        .contextMenu {
+            Button("Quit") {
+                onQuit()
+            }
+        }
     }
 }
 
