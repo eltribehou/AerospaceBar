@@ -4,12 +4,14 @@ import SwiftUI
 class MenuBarManager: ObservableObject {
     private var window: NSWindow?
     private let aerospaceClient: AerospaceClient
+    private let config: Config
     @Published var workspaces: [String] = []
     @Published var currentWorkspace: String?
     @Published var appsPerWorkspace: [String: [AppInfo]] = [:]
 
     init() {
         let config = Config.load()
+        self.config = config
         self.aerospaceClient = AerospaceClient(config: config)
     }
 
@@ -20,6 +22,7 @@ class MenuBarManager: ObservableObject {
         // Create the menubar window with the manager as observed object
         let contentView = MenuBarView(
             manager: self,
+            barPosition: config.barPosition,
             onWorkspaceClick: { [weak self] workspace in
                 self?.switchToWorkspace(workspace)
             },
@@ -32,13 +35,7 @@ class MenuBarManager: ObservableObject {
 
         // Create window
         let screen = NSScreen.main!
-        let menuBarHeight: CGFloat = 24
-        let windowFrame = NSRect(
-            x: 0,
-            y: screen.frame.height - menuBarHeight,
-            width: screen.frame.width,
-            height: menuBarHeight
-        )
+        let windowFrame = calculateWindowFrame(for: screen, position: config.barPosition)
 
         window = NSWindow(
             contentRect: windowFrame,
@@ -57,6 +54,43 @@ class MenuBarManager: ObservableObject {
         // Refresh workspaces periodically (fast refresh for responsive workspace switching)
         Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
             self?.refreshWorkspaces()
+        }
+    }
+
+    private func calculateWindowFrame(for screen: NSScreen, position: BarPosition) -> NSRect {
+        let barThickness: CGFloat = 32  // Thickness of the bar (width for left/right, height for top/bottom)
+
+        switch position {
+        case .top:
+            // Calculate actual menubar height (accounts for notch on newer Macs)
+            let menuBarHeight = screen.frame.maxY - screen.visibleFrame.maxY
+            return NSRect(
+                x: screen.frame.origin.x,
+                y: screen.frame.origin.y + screen.frame.height - menuBarHeight,
+                width: screen.frame.width,
+                height: menuBarHeight
+            )
+        case .bottom:
+            return NSRect(
+                x: screen.frame.origin.x,
+                y: screen.frame.origin.y,
+                width: screen.frame.width,
+                height: barThickness
+            )
+        case .left:
+            return NSRect(
+                x: screen.frame.origin.x,
+                y: screen.frame.origin.y,
+                width: barThickness,
+                height: screen.frame.height
+            )
+        case .right:
+            return NSRect(
+                x: screen.frame.origin.x + screen.frame.width - barThickness,
+                y: screen.frame.origin.y,
+                width: barThickness,
+                height: screen.frame.height
+            )
         }
     }
 

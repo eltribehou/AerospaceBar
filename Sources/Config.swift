@@ -1,10 +1,21 @@
 import Foundation
 import TOMLKit
 
+enum BarPosition: String {
+    case top
+    case bottom
+    case left
+    case right
+}
+
 struct Config {
     let aerospacePath: String
+    let barPosition: BarPosition
 
-    static let `default` = Config(aerospacePath: "/usr/local/bin/hyprspace")
+    static let `default` = Config(
+        aerospacePath: "/usr/local/bin/hyprspace",
+        barPosition: .top
+    )
 
     static func load() -> Config {
         // Try reading from possible config file locations
@@ -38,6 +49,15 @@ struct Config {
             aerospacePath = Config.default.aerospacePath
         }
 
-        return Config(aerospacePath: aerospacePath)
+        // Read bar-position setting, fall back to default if not specified
+        let barPosition: BarPosition
+        if let positionString = table["bar-position"]?.string,
+           let position = BarPosition(rawValue: positionString) {
+            barPosition = position
+        } else {
+            barPosition = Config.default.barPosition
+        }
+
+        return Config(aerospacePath: aerospacePath, barPosition: barPosition)
     }
 }

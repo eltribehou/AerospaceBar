@@ -8,3 +8,8 @@
 # Supports tilde expansion (~)
 # Default: /usr/local/bin/hyprspace
 aerospace-path = "/usr/local/bin/hyprspace"
+
+# Position of the menubar
+# Options: "top", "bottom", "left", "right"
+# Default: "top"
+bar-position = "top"

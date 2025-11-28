@@ -3,10 +3,29 @@ import AppKit
 
 struct MenuBarView: View {
     @ObservedObject var manager: MenuBarManager
+    let barPosition: BarPosition
     let onWorkspaceClick: (String) -> Void
     let onQuit: () -> Void
 
     var body: some View {
+        Group {
+            switch barPosition {
+            case .top, .bottom:
+                horizontalLayout
+            case .left, .right:
+                verticalLayout
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(white: 0.1, opacity: 0.95))
+        .contextMenu {
+            Button("Quit") {
+                onQuit()
+            }
+        }
+    }
+
+    private var horizontalLayout: some View {
         HStack(spacing: 0) {
             // Workspaces on the left
             HStack(spacing: 4) {
@@ -15,6 +34,7 @@ struct MenuBarView: View {
                         workspace: workspace,
                         isCurrent: workspace == manager.currentWorkspace,
                         apps: manager.appsPerWorkspace[workspace] ?? [],
+                        isVertical: false,
                         onClick: {
                             onWorkspaceClick(workspace)
                         }
@@ -26,15 +46,34 @@ struct MenuBarView: View {
             Spacer()
 
             // Clock on the right
-            ClockView()
+            ClockView(isVertical: false)
                 .padding(.trailing, 8)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(white: 0.1, opacity: 0.95))
-        .contextMenu {
-            Button("Quit") {
-                onQuit()
+    }
+
+    private var verticalLayout: some View {
+        VStack(spacing: 0) {
+            // Workspaces on the top
+            VStack(spacing: 4) {
+                ForEach(manager.workspaces, id: \.self) { workspace in
+                    WorkspaceButton(
+                        workspace: workspace,
+                        isCurrent: workspace == manager.currentWorkspace,
+                        apps: manager.appsPerWorkspace[workspace] ?? [],
+                        isVertical: true,
+                        onClick: {
+                            onWorkspaceClick(workspace)
+                        }
+                    )
+                }
             }
+            .padding(.top, 8)
+
+            Spacer()
+
+            // Clock on the bottom
+            ClockView(isVertical: true)
+                .padding(.bottom, 8)
         }
     }
 }
@@ -43,35 +82,64 @@ struct WorkspaceButton: View {
     let workspace: String
     let isCurrent: Bool
     let apps: [AppInfo]
+    let isVertical: Bool
     let onClick: () -> Void
 
     @State private var isHovering = false
 
     var body: some View {
         Button(action: onClick) {
-            HStack(spacing: 4) {
-                Text(workspace)
-                    .font(.system(size: 12, weight: isCurrent ? .bold : .regular))
-                    .foregroundColor(isCurrent ? .white : .white.opacity(0.7))
+            Group {
+                if isVertical {
+                    VStack(spacing: 2) {
+                        Text(workspace)
+                            .font(.system(size: 12, weight: isCurrent ? .bold : .regular))
+                            .foregroundColor(isCurrent ? .white : .white.opacity(0.7))
 
-                // Show app icons (limit to first 3)
-                if !apps.isEmpty {
-                    HStack(spacing: 2) {
-                        ForEach(Array(apps.prefix(3)), id: \.self) { appInfo in
-                            AppIconView(appName: appInfo.name, isFullscreen: appInfo.isFullscreen)
-                        }
+                        // Show app icons (limit to first 3)
+                        if !apps.isEmpty {
+                            VStack(spacing: 2) {
+                                ForEach(Array(apps.prefix(3)), id: \.self) { appInfo in
+                                    AppIconView(appName: appInfo.name, isFullscreen: appInfo.isFullscreen)
+                                }
 
-                        // Show count if more than 3 apps
-                        if apps.count > 3 {
-                            Text("+\(apps.count - 3)")
-                                .font(.system(size: 8))
-                                .foregroundColor(.white.opacity(0.5))
+                                // Show count if more than 3 apps
+                                if apps.count > 3 {
+                                    Text("+\(apps.count - 3)")
+                                        .font(.system(size: 8))
+                                        .foregroundColor(.white.opacity(0.5))
+                                }
+                            }
                         }
                     }
+                    .padding(.horizontal, 2)
+                    .padding(.vertical, 8)
+                } else {
+                    HStack(spacing: 4) {
+                        Text(workspace)
+                            .font(.system(size: 12, weight: isCurrent ? .bold : .regular))
+                            .foregroundColor(isCurrent ? .white : .white.opacity(0.7))
+
+                        // Show app icons (limit to first 3)
+                        if !apps.isEmpty {
+                            HStack(spacing: 2) {
+                                ForEach(Array(apps.prefix(3)), id: \.self) { appInfo in
+                                    AppIconView(appName: appInfo.name, isFullscreen: appInfo.isFullscreen)
+                                }
+
+                                // Show count if more than 3 apps
+                                if apps.count > 3 {
+                                    Text("+\(apps.count - 3)")
+                                        .font(.system(size: 8))
+                                        .foregroundColor(.white.opacity(0.5))
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 2)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
             .background(
                 RoundedRectangle(cornerRadius: 4)
                     .fill(backgroundColor)
@@ -131,6 +199,7 @@ struct AppIconView: View {
 }
 
 struct ClockView: View {
+    let isVertical: Bool
     @State private var currentTime = Date()
 
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
@@ -139,6 +208,7 @@ struct ClockView: View {
         Text(timeString)
             .font(.system(size: 12, weight: .regular))
             .foregroundColor(.white.opacity(0.9))
+            .rotationEffect(isVertical ? .degrees(-90) : .degrees(0))
             .onReceive(timer) { newTime in
                 currentTime = newTime
             }
