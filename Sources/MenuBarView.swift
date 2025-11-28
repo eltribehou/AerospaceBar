@@ -204,9 +204,8 @@ struct ClockView: View {
 
     var body: some View {
         Text(timeString)
-            .font(.system(size: 12, weight: .regular))
+            .font(.system(size: isVertical ? 8 : 12, weight: .regular))
             .foregroundColor(.white.opacity(0.9))
-            .rotationEffect(isVertical ? .degrees(-90) : .degrees(0))
     }
 
     private var timeString: String {
