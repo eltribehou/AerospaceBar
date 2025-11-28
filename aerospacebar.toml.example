@@ -17,3 +17,10 @@ bar-position = "top"
 # Size of the menubar (height for horizontal, width for vertical)
 # Default: 25 for horizontal (top/bottom), 30 for vertical (left/right)
 bar-size = 25
+
+# Polling interval for workspace/window updates (in milliseconds)
+# Lower values = more responsive, higher CPU usage
+# Higher values = better battery life, less responsive
+# Minimum: 100ms
+# Default: 300ms
+aerospace-poll-interval = 300

@@ -52,8 +52,10 @@ class MenuBarManager: ObservableObject {
         window?.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         window?.makeKeyAndOrderFront(nil)
 
-        // Refresh workspaces periodically (fast refresh for responsive workspace switching)
-        Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
+        // Refresh workspaces periodically
+        // Convert pollInterval from milliseconds to seconds
+        let pollIntervalSeconds = TimeInterval(config.pollInterval) / 1000.0
+        Timer.scheduledTimer(withTimeInterval: pollIntervalSeconds, repeats: true) { [weak self] _ in
             self?.refreshWorkspaces()
         }
 
