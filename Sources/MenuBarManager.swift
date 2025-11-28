@@ -64,37 +64,37 @@ class MenuBarManager: ObservableObject {
     }
 
     private func calculateWindowFrame(for screen: NSScreen, position: BarPosition) -> NSRect {
-        let barThickness: CGFloat = 32  // Thickness of the bar (width for left/right, height for top/bottom)
-
         switch position {
         case .top:
             // Calculate actual menubar height (accounts for notch on newer Macs)
             let menuBarHeight = screen.frame.maxY - screen.visibleFrame.maxY
+            // Use the larger of configured size or menubar height (to accommodate notch)
+            let barHeight = max(config.barSize, menuBarHeight)
             return NSRect(
                 x: screen.frame.origin.x,
-                y: screen.frame.origin.y + screen.frame.height - menuBarHeight,
+                y: screen.frame.origin.y + screen.frame.height - barHeight,
                 width: screen.frame.width,
-                height: menuBarHeight
+                height: barHeight
             )
         case .bottom:
             return NSRect(
                 x: screen.frame.origin.x,
                 y: screen.frame.origin.y,
                 width: screen.frame.width,
-                height: barThickness
+                height: config.barSize
             )
         case .left:
             return NSRect(
                 x: screen.frame.origin.x,
                 y: screen.frame.origin.y,
-                width: barThickness,
+                width: config.barSize,
                 height: screen.frame.height
             )
         case .right:
             return NSRect(
-                x: screen.frame.origin.x + screen.frame.width - barThickness,
+                x: screen.frame.origin.x + screen.frame.width - config.barSize,
                 y: screen.frame.origin.y,
-                width: barThickness,
+                width: config.barSize,
                 height: screen.frame.height
             )
         }

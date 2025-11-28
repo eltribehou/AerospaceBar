@@ -11,11 +11,22 @@ enum BarPosition: String {
 struct Config {
     let aerospacePath: String
     let barPosition: BarPosition
+    let barSize: CGFloat
 
     static let `default` = Config(
         aerospacePath: "/usr/local/bin/hyprspace",
-        barPosition: .top
+        barPosition: .top,
+        barSize: 25
     )
+
+    static func defaultBarSize(for position: BarPosition) -> CGFloat {
+        switch position {
+        case .top, .bottom:
+            return 25
+        case .left, .right:
+            return 30
+        }
+    }
 
     static func load() -> Config {
         // Try reading from possible config file locations
@@ -58,6 +69,16 @@ struct Config {
             barPosition = Config.default.barPosition
         }
 
-        return Config(aerospacePath: aerospacePath, barPosition: barPosition)
+        // Read bar-size setting, fall back to position-specific default if not specified
+        let barSize: CGFloat
+        if let sizeValue = table["bar-size"]?.int {
+            barSize = CGFloat(sizeValue)
+        } else if let sizeValue = table["bar-size"]?.double {
+            barSize = CGFloat(sizeValue)
+        } else {
+            barSize = Config.defaultBarSize(for: barPosition)
+        }
+
+        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize)
     }
 }

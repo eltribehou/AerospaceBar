@@ -13,3 +13,7 @@ aerospace-path = "/usr/local/bin/hyprspace"
 # Options: "top", "bottom", "left", "right"
 # Default: "top"
 bar-position = "top"
+
+# Size of the menubar (height for horizontal, width for vertical)
+# Default: 25 for horizontal (top/bottom), 30 for vertical (left/right)
+bar-size = 25
