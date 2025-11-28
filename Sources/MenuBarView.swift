@@ -46,7 +46,7 @@ struct MenuBarView: View {
             Spacer()
 
             // Clock on the right
-            ClockView(isVertical: false)
+            ClockView(isVertical: false, currentTime: manager.currentTime)
                 .padding(.trailing, 8)
         }
     }
@@ -72,7 +72,7 @@ struct MenuBarView: View {
             Spacer()
 
             // Clock on the bottom
-            ClockView(isVertical: true)
+            ClockView(isVertical: true, currentTime: manager.currentTime)
                 .padding(.bottom, 8)
         }
     }
@@ -200,18 +200,13 @@ struct AppIconView: View {
 
 struct ClockView: View {
     let isVertical: Bool
-    @State private var currentTime = Date()
-
-    let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    let currentTime: Date
 
     var body: some View {
         Text(timeString)
             .font(.system(size: 12, weight: .regular))
             .foregroundColor(.white.opacity(0.9))
             .rotationEffect(isVertical ? .degrees(-90) : .degrees(0))
-            .onReceive(timer) { newTime in
-                currentTime = newTime
-            }
     }
 
     private var timeString: String {

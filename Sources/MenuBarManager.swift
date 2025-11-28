@@ -8,6 +8,7 @@ class MenuBarManager: ObservableObject {
     @Published var workspaces: [String] = []
     @Published var currentWorkspace: String?
     @Published var appsPerWorkspace: [String: [AppInfo]] = [:]
+    @Published var currentTime = Date()
 
     init() {
         let config = Config.load()
@@ -54,6 +55,11 @@ class MenuBarManager: ObservableObject {
         // Refresh workspaces periodically (fast refresh for responsive workspace switching)
         Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
             self?.refreshWorkspaces()
+        }
+
+        // Update clock every second
+        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+            self?.currentTime = Date()
         }
     }
 
