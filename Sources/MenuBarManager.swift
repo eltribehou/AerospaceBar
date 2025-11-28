@@ -12,11 +12,9 @@ class MenuBarManager: ObservableObject {
         // Get initial workspaces
         refreshWorkspaces()
 
-        // Create the menubar window
+        // Create the menubar window with the manager as observed object
         let contentView = MenuBarView(
-            workspaces: workspaces,
-            currentWorkspace: currentWorkspace,
-            appsPerWorkspace: appsPerWorkspace,
+            manager: self,
             onWorkspaceClick: { [weak self] workspace in
                 self?.switchToWorkspace(workspace)
             },
@@ -54,7 +52,6 @@ class MenuBarManager: ObservableObject {
         // Refresh workspaces periodically (fast refresh for responsive workspace switching)
         Timer.scheduledTimer(withTimeInterval: 0.3, repeats: true) { [weak self] _ in
             self?.refreshWorkspaces()
-            self?.updateWindowContent()
         }
     }
 
@@ -79,28 +76,11 @@ class MenuBarManager: ObservableObject {
         workspaces = Array(apps.keys).sorted()
     }
 
-    private func updateWindowContent() {
-        let contentView = MenuBarView(
-            workspaces: workspaces,
-            currentWorkspace: currentWorkspace,
-            appsPerWorkspace: appsPerWorkspace,
-            onWorkspaceClick: { [weak self] workspace in
-                self?.switchToWorkspace(workspace)
-            },
-            onQuit: {
-                NSApplication.shared.terminate(nil)
-            }
-        )
-
-        window?.contentView = NSHostingView(rootView: contentView)
-    }
-
     private func switchToWorkspace(_ workspace: String) {
         aerospaceClient.switchToWorkspace(workspace)
         // Refresh immediately after switching
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             self?.refreshWorkspaces()
-            self?.updateWindowContent()
         }
     }
 }

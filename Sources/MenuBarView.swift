@@ -2,9 +2,7 @@ import SwiftUI
 import AppKit
 
 struct MenuBarView: View {
-    let workspaces: [String]
-    let currentWorkspace: String?
-    let appsPerWorkspace: [String: [AppInfo]]
+    @ObservedObject var manager: MenuBarManager
     let onWorkspaceClick: (String) -> Void
     let onQuit: () -> Void
 
@@ -12,11 +10,11 @@ struct MenuBarView: View {
         HStack(spacing: 0) {
             // Workspaces on the left
             HStack(spacing: 4) {
-                ForEach(workspaces, id: \.self) { workspace in
+                ForEach(manager.workspaces, id: \.self) { workspace in
                     WorkspaceButton(
                         workspace: workspace,
-                        isCurrent: workspace == currentWorkspace,
-                        apps: appsPerWorkspace[workspace] ?? [],
+                        isCurrent: workspace == manager.currentWorkspace,
+                        apps: manager.appsPerWorkspace[workspace] ?? [],
                         onClick: {
                             onWorkspaceClick(workspace)
                         }
