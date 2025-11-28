@@ -1,0 +1,10 @@
+# AerospaceMenubar Configuration File
+#
+# Place this file at one of these locations:
+#   - ~/.aerospacebar.toml
+#   - ~/.config/aerospacebar/aerospacebar.toml
+
+# Path to the aerospace/hyprspace binary
+# Supports tilde expansion (~)
+# Default: /usr/local/bin/hyprspace
+aerospace-path = "/usr/local/bin/hyprspace"

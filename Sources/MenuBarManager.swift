@@ -3,10 +3,15 @@ import SwiftUI
 
 class MenuBarManager: ObservableObject {
     private var window: NSWindow?
-    private let aerospaceClient = AerospaceClient()
+    private let aerospaceClient: AerospaceClient
     @Published var workspaces: [String] = []
     @Published var currentWorkspace: String?
     @Published var appsPerWorkspace: [String: [AppInfo]] = [:]
+
+    init() {
+        let config = Config.load()
+        self.aerospaceClient = AerospaceClient(config: config)
+    }
 
     func setup() {
         // Get initial workspaces

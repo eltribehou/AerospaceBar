@@ -1,7 +1,11 @@
 import Foundation
 
 class AerospaceClient {
-    private let aerospaceCommand = "/usr/local/bin/hyprspace"
+    private let aerospaceCommand: String
+
+    init(config: Config) {
+        self.aerospaceCommand = config.aerospacePath
+    }
 
     /// Get list of non-hidden workspaces
     func getWorkspaces() -> [String] {

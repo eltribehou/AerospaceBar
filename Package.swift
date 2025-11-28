@@ -12,9 +12,13 @@ let package = Package(
             targets: ["AerospaceMenubar"]
         )
     ],
+    dependencies: [
+        .package(url: "https://github.com/LebJe/TOMLKit.git", from: "0.5.0")
+    ],
     targets: [
         .executableTarget(
             name: "AerospaceMenubar",
+            dependencies: ["TOMLKit"],
             path: "Sources"
         )
     ]
