@@ -56,3 +56,29 @@ text-clock = "#ffffffe6"
 fullscreen-badge-background = "#00ff00"
 # Default symbol: #ffffff
 fullscreen-badge-symbol = "#ffffff"
+
+# Component layout configuration (REQUIRED)
+# Components are displayed in the order they appear in this section
+# Available components: workspaces, clock
+[components]
+
+# Workspaces component
+# Shows the list of workspaces with app icons
+[components.workspaces]
+centering = "left"  # Options: "left", "center", "right"
+# Padding format (MUST be quoted): "all" or "vertical,horizontal" or "top,right,bottom,left"
+# Examples:
+# padding = "10"          # 10px all sides
+# padding = "10,20"       # 10px vertical, 20px horizontal
+# padding = "0,0,0,8"     # 0px top, 0px right, 0px bottom, 8px left
+
+# Clock component
+# Shows current time in 24-hour format (HH:mm)
+[components.clock]
+centering = "right"
+# padding = "0,8,0,0"  # IMPORTANT: Must be quoted as a string!
+
+# Example: Multiple components with different positions
+# You can have multiple instances of the same component
+# Note: For duplicate components, you cannot use the same key twice in TOML
+# This is a limitation we'll need to address with array syntax
