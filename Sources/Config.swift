@@ -1,5 +1,6 @@
 import Foundation
 import TOMLKit
+import SwiftUI
 
 enum BarPosition: String {
     case top
@@ -8,17 +9,79 @@ enum BarPosition: String {
     case right
 }
 
+struct ColorConfig {
+    let background: Color
+    let workspaceActiveBackground: Color
+    let workspaceHoverBackground: Color
+    let workspaceDefaultBackground: Color
+    let textActive: Color
+    let textInactive: Color
+    let textSecondary: Color
+    let textClock: Color
+    let fullscreenBadgeBackground: Color
+    let fullscreenBadgeSymbol: Color
+
+    static let `default` = ColorConfig(
+        background: Color(white: 0.1, opacity: 0.95),
+        workspaceActiveBackground: Color.blue.opacity(0.6),
+        workspaceHoverBackground: Color.white.opacity(0.2),
+        workspaceDefaultBackground: Color.white.opacity(0.1),
+        textActive: .white,
+        textInactive: .white.opacity(0.7),
+        textSecondary: .white.opacity(0.5),
+        textClock: .white.opacity(0.9),
+        fullscreenBadgeBackground: .green,
+        fullscreenBadgeSymbol: .white
+    )
+
+    static func parseColor(_ hex: String) -> Color? {
+        // Parse #RRGGBB, #RRGGBBAA, #RGB formats
+        var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
+        hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
+
+        var rgb: UInt64 = 0
+        guard Scanner(string: hexSanitized).scanHexInt64(&rgb) else { return nil }
+
+        let length = hexSanitized.count
+        let r, g, b, a: Double
+
+        switch length {
+        case 3: // #RGB
+            r = Double((rgb >> 8) & 0xF) / 15.0
+            g = Double((rgb >> 4) & 0xF) / 15.0
+            b = Double(rgb & 0xF) / 15.0
+            a = 1.0
+        case 6: // #RRGGBB
+            r = Double((rgb >> 16) & 0xFF) / 255.0
+            g = Double((rgb >> 8) & 0xFF) / 255.0
+            b = Double(rgb & 0xFF) / 255.0
+            a = 1.0
+        case 8: // #RRGGBBAA
+            r = Double((rgb >> 24) & 0xFF) / 255.0
+            g = Double((rgb >> 16) & 0xFF) / 255.0
+            b = Double((rgb >> 8) & 0xFF) / 255.0
+            a = Double(rgb & 0xFF) / 255.0
+        default:
+            return nil
+        }
+
+        return Color(red: r, green: g, blue: b, opacity: a)
+    }
+}
+
 struct Config {
     let aerospacePath: String
     let barPosition: BarPosition
     let barSize: CGFloat
     let pollInterval: Int  // in milliseconds
+    let colors: ColorConfig
 
     static let `default` = Config(
         aerospacePath: "/usr/local/bin/hyprspace",
         barPosition: .top,
         barSize: 25,
-        pollInterval: 300  // 300ms default
+        pollInterval: 300,  // 300ms default
+        colors: .default
     )
 
     static func defaultBarSize(for position: BarPosition) -> CGFloat {
@@ -95,6 +158,25 @@ struct Config {
             pollInterval = Config.default.pollInterval
         }
 
-        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, pollInterval: pollInterval)
+        // Read [colors] section if present
+        let colors: ColorConfig
+        if let colorsTable = table["colors"]?.table {
+            colors = ColorConfig(
+                background: colorsTable["background"]?.string.flatMap(ColorConfig.parseColor) ?? ColorConfig.default.background,
+                workspaceActiveBackground: colorsTable["workspace-active-background"]?.string.flatMap(ColorConfig.parseColor) ?? ColorConfig.default.workspaceActiveBackground,
+                workspaceHoverBackground: colorsTable["workspace-hover-background"]?.string.flatMap(ColorConfig.parseColor) ?? ColorConfig.default.workspaceHoverBackground,
+                workspaceDefaultBackground: colorsTable["workspace-default-background"]?.string.flatMap(ColorConfig.parseColor) ?? ColorConfig.default.workspaceDefaultBackground,
+                textActive: colorsTable["text-active"]?.string.flatMap(ColorConfig.parseColor) ?? ColorConfig.default.textActive,
+                textInactive: colorsTable["text-inactive"]?.string.flatMap(ColorConfig.parseColor) ?? ColorConfig.default.textInactive,
+                textSecondary: colorsTable["text-secondary"]?.string.flatMap(ColorConfig.parseColor) ?? ColorConfig.default.textSecondary,
+                textClock: colorsTable["text-clock"]?.string.flatMap(ColorConfig.parseColor) ?? ColorConfig.default.textClock,
+                fullscreenBadgeBackground: colorsTable["fullscreen-badge-background"]?.string.flatMap(ColorConfig.parseColor) ?? ColorConfig.default.fullscreenBadgeBackground,
+                fullscreenBadgeSymbol: colorsTable["fullscreen-badge-symbol"]?.string.flatMap(ColorConfig.parseColor) ?? ColorConfig.default.fullscreenBadgeSymbol
+            )
+        } else {
+            colors = .default
+        }
+
+        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, pollInterval: pollInterval, colors: colors)
     }
 }

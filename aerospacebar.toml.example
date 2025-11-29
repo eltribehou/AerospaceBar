@@ -24,3 +24,35 @@ bar-size = 25
 # Minimum: 100ms
 # Default: 300ms
 aerospace-poll-interval = 300
+
+# Color customization
+# All colors support hex formats: #RGB, #RRGGBB, or #RRGGBBAA (with alpha)
+# If [colors] section is omitted or specific colors are not set, defaults will be used
+[colors]
+# Menubar background
+# Default: #1a1a1af2
+background = "#1a1a1af2"
+
+# Workspace button backgrounds
+# Default active: #0078d799
+workspace-active-background = "#0078d799"
+# Default hover: #ffffff33
+workspace-hover-background = "#ffffff33"
+# Default: #ffffff1a
+workspace-default-background = "#ffffff1a"
+
+# Text colors
+# Default active: #ffffff
+text-active = "#ffffff"
+# Default inactive: #ffffffb3
+text-inactive = "#ffffffb3"
+# Default secondary (app count): #ffffff80
+text-secondary = "#ffffff80"
+# Default clock: #ffffffe6
+text-clock = "#ffffffe6"
+
+# Fullscreen indicator badge
+# Default background: #00ff00
+fullscreen-badge-background = "#00ff00"
+# Default symbol: #ffffff
+fullscreen-badge-symbol = "#ffffff"

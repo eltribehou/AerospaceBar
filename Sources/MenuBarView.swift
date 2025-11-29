@@ -4,6 +4,7 @@ import AppKit
 struct MenuBarView: View {
     @ObservedObject var manager: MenuBarManager
     let barPosition: BarPosition
+    let colors: ColorConfig
     let onWorkspaceClick: (String) -> Void
     let onQuit: () -> Void
 
@@ -17,7 +18,7 @@ struct MenuBarView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(white: 0.1, opacity: 0.95))
+        .background(colors.background)
         .contextMenu {
             Button("Quit") {
                 onQuit()
@@ -35,6 +36,7 @@ struct MenuBarView: View {
                         isCurrent: workspace == manager.currentWorkspace,
                         apps: manager.appsPerWorkspace[workspace] ?? [],
                         isVertical: false,
+                        colors: colors,
                         onClick: {
                             onWorkspaceClick(workspace)
                         }
@@ -46,7 +48,7 @@ struct MenuBarView: View {
             Spacer()
 
             // Clock on the right
-            ClockView(isVertical: false, currentTime: manager.currentTime)
+            ClockView(isVertical: false, currentTime: manager.currentTime, colors: colors)
                 .padding(.trailing, 8)
         }
     }
@@ -61,6 +63,7 @@ struct MenuBarView: View {
                         isCurrent: workspace == manager.currentWorkspace,
                         apps: manager.appsPerWorkspace[workspace] ?? [],
                         isVertical: true,
+                        colors: colors,
                         onClick: {
                             onWorkspaceClick(workspace)
                         }
@@ -72,7 +75,7 @@ struct MenuBarView: View {
             Spacer()
 
             // Clock on the bottom
-            ClockView(isVertical: true, currentTime: manager.currentTime)
+            ClockView(isVertical: true, currentTime: manager.currentTime, colors: colors)
                 .padding(.bottom, 8)
         }
     }
@@ -83,6 +86,7 @@ struct WorkspaceButton: View {
     let isCurrent: Bool
     let apps: [AppInfo]
     let isVertical: Bool
+    let colors: ColorConfig
     let onClick: () -> Void
 
     @State private var isHovering = false
@@ -94,20 +98,20 @@ struct WorkspaceButton: View {
                     VStack(spacing: 2) {
                         Text(workspace)
                             .font(.system(size: 12, weight: isCurrent ? .bold : .regular))
-                            .foregroundColor(isCurrent ? .white : .white.opacity(0.7))
+                            .foregroundColor(isCurrent ? colors.textActive : colors.textInactive)
 
                         // Show app icons (limit to first 3)
                         if !apps.isEmpty {
                             VStack(spacing: 2) {
                                 ForEach(Array(apps.prefix(3)), id: \.self) { appInfo in
-                                    AppIconView(appName: appInfo.name, isFullscreen: appInfo.isFullscreen)
+                                    AppIconView(appName: appInfo.name, isFullscreen: appInfo.isFullscreen, colors: colors)
                                 }
 
                                 // Show count if more than 3 apps
                                 if apps.count > 3 {
                                     Text("+\(apps.count - 3)")
                                         .font(.system(size: 8))
-                                        .foregroundColor(.white.opacity(0.5))
+                                        .foregroundColor(colors.textSecondary)
                                 }
                             }
                         }
@@ -118,20 +122,20 @@ struct WorkspaceButton: View {
                     HStack(spacing: 4) {
                         Text(workspace)
                             .font(.system(size: 12, weight: isCurrent ? .bold : .regular))
-                            .foregroundColor(isCurrent ? .white : .white.opacity(0.7))
+                            .foregroundColor(isCurrent ? colors.textActive : colors.textInactive)
 
                         // Show app icons (limit to first 3)
                         if !apps.isEmpty {
                             HStack(spacing: 2) {
                                 ForEach(Array(apps.prefix(3)), id: \.self) { appInfo in
-                                    AppIconView(appName: appInfo.name, isFullscreen: appInfo.isFullscreen)
+                                    AppIconView(appName: appInfo.name, isFullscreen: appInfo.isFullscreen, colors: colors)
                                 }
 
                                 // Show count if more than 3 apps
                                 if apps.count > 3 {
                                     Text("+\(apps.count - 3)")
                                         .font(.system(size: 8))
-                                        .foregroundColor(.white.opacity(0.5))
+                                        .foregroundColor(colors.textSecondary)
                                 }
                             }
                         }
@@ -158,11 +162,11 @@ struct WorkspaceButton: View {
 
     private var backgroundColor: Color {
         if isCurrent {
-            return Color.blue.opacity(0.6)
+            return colors.workspaceActiveBackground
         } else if isHovering {
-            return Color.white.opacity(0.2)
+            return colors.workspaceHoverBackground
         } else {
-            return Color.white.opacity(0.1)
+            return colors.workspaceDefaultBackground
         }
     }
 }
@@ -170,6 +174,7 @@ struct WorkspaceButton: View {
 struct AppIconView: View {
     let appName: String
     let isFullscreen: Bool
+    let colors: ColorConfig
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -185,12 +190,12 @@ struct AppIconView: View {
             if isFullscreen {
                 ZStack {
                     Circle()
-                        .fill(Color.green)
+                        .fill(colors.fullscreenBadgeBackground)
                         .frame(width: 6, height: 6)
 
                     Text("⛶")
                         .font(.system(size: 4))
-                        .foregroundColor(.white)
+                        .foregroundColor(colors.fullscreenBadgeSymbol)
                 }
                 .offset(x: 2, y: -2)
             }
@@ -201,11 +206,12 @@ struct AppIconView: View {
 struct ClockView: View {
     let isVertical: Bool
     let currentTime: Date
+    let colors: ColorConfig
 
     var body: some View {
         Text(timeString)
             .font(.system(size: isVertical ? 8 : 12, weight: .regular))
-            .foregroundColor(.white.opacity(0.9))
+            .foregroundColor(colors.textClock)
     }
 
     private var timeString: String {

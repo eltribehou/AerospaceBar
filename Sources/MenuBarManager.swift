@@ -24,6 +24,7 @@ class MenuBarManager: ObservableObject {
         let contentView = MenuBarView(
             manager: self,
             barPosition: config.barPosition,
+            colors: config.colors,
             onWorkspaceClick: { [weak self] workspace in
                 self?.switchToWorkspace(workspace)
             },
@@ -46,7 +47,7 @@ class MenuBarManager: ObservableObject {
         )
 
         window?.contentView = hostingView
-        window?.backgroundColor = NSColor(white: 0.1, alpha: 0.95)
+        window?.backgroundColor = NSColor(config.colors.background)
         window?.isOpaque = false
         window?.level = .floating
         window?.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
