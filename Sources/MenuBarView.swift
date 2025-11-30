@@ -5,7 +5,6 @@ struct MenuBarView: View {
     @ObservedObject var manager: MenuBarManager
     let barPosition: BarPosition
     let colors: ColorConfig
-    let componentLayout: ComponentLayout
     let onWorkspaceClick: (String) -> Void
     let onQuit: () -> Void
 
@@ -13,9 +12,9 @@ struct MenuBarView: View {
         Group {
             switch barPosition {
             case .top, .bottom:
-                dynamicHorizontalLayout
+                horizontalLayout
             case .left, .right:
-                dynamicVerticalLayout
+                verticalLayout
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -27,92 +26,58 @@ struct MenuBarView: View {
         }
     }
 
-    // MARK: - Dynamic Layout Construction
-
-    private var dynamicHorizontalLayout: some View {
+    private var horizontalLayout: some View {
         HStack(spacing: 0) {
-            // Left components
-            if !componentLayout.left.isEmpty {
-                HStack(spacing: 0) {
-                    ForEach(Array(componentLayout.left.enumerated()), id: \.offset) { _, instance in
-                        renderComponent(instance, isVertical: false)
-                    }
+            // Workspaces on the left
+            HStack(spacing: 4) {
+                ForEach(manager.workspaces, id: \.self) { workspace in
+                    WorkspaceButton(
+                        workspace: workspace,
+                        isCurrent: workspace == manager.currentWorkspace,
+                        apps: manager.appsPerWorkspace[workspace] ?? [],
+                        isVertical: false,
+                        colors: colors,
+                        onClick: {
+                            onWorkspaceClick(workspace)
+                        }
+                    )
                 }
             }
+            .padding(.leading, 8)
 
-            // Center components
-            if !componentLayout.center.isEmpty {
-                ForEach(Array(componentLayout.center.enumerated()), id: \.offset) { _, instance in
-                    Spacer()
-                    renderComponent(instance, isVertical: false)
-                    Spacer()
-                }
-            } else if componentLayout.right.isEmpty {
-                // No center and no right = spacer to push left to the edge
-                Spacer()
-            } else if !componentLayout.left.isEmpty {
-                // Have left and right but no center = single spacer between them
-                Spacer()
-            }
+            Spacer()
 
-            // Right components
-            if !componentLayout.right.isEmpty {
-                HStack(spacing: 0) {
-                    ForEach(Array(componentLayout.right.enumerated()), id: \.offset) { _, instance in
-                        renderComponent(instance, isVertical: false)
-                    }
-                }
-            }
+            // Clock on the right
+            ClockView(isVertical: false, currentTime: manager.currentTime, colors: colors)
+                .padding(.trailing, 8)
         }
     }
 
-    private var dynamicVerticalLayout: some View {
+    private var verticalLayout: some View {
         VStack(spacing: 0) {
-            // Left (top in vertical) components
-            if !componentLayout.left.isEmpty {
-                VStack(spacing: 0) {
-                    ForEach(Array(componentLayout.left.enumerated()), id: \.offset) { _, instance in
-                        renderComponent(instance, isVertical: true)
-                    }
+            // Workspaces on the top
+            VStack(spacing: 4) {
+                ForEach(manager.workspaces, id: \.self) { workspace in
+                    WorkspaceButton(
+                        workspace: workspace,
+                        isCurrent: workspace == manager.currentWorkspace,
+                        apps: manager.appsPerWorkspace[workspace] ?? [],
+                        isVertical: true,
+                        colors: colors,
+                        onClick: {
+                            onWorkspaceClick(workspace)
+                        }
+                    )
                 }
             }
+            .padding(.top, 8)
 
-            // Center components
-            if !componentLayout.center.isEmpty {
-                ForEach(Array(componentLayout.center.enumerated()), id: \.offset) { _, instance in
-                    Spacer()
-                    renderComponent(instance, isVertical: true)
-                    Spacer()
-                }
-            } else if componentLayout.right.isEmpty {
-                Spacer()
-            } else if !componentLayout.left.isEmpty {
-                Spacer()
-            }
+            Spacer()
 
-            // Right (bottom in vertical) components
-            if !componentLayout.right.isEmpty {
-                VStack(spacing: 0) {
-                    ForEach(Array(componentLayout.right.enumerated()), id: \.offset) { _, instance in
-                        renderComponent(instance, isVertical: true)
-                    }
-                }
-            }
+            // Clock on the bottom
+            ClockView(isVertical: true, currentTime: manager.currentTime, colors: colors)
+                .padding(.bottom, 8)
         }
-    }
-
-    @ViewBuilder
-    private func renderComponent(_ instance: ComponentInstance, isVertical: Bool) -> some View {
-        let factory = ComponentFactory(
-            manager: manager,
-            colors: colors,
-            onWorkspaceClick: onWorkspaceClick
-        )
-
-        let component = factory.makeComponent(for: instance)
-
-        component.render(isVertical: isVertical)
-            .padding(instance.padding.edgeInsets)
     }
 }
 

@@ -75,34 +75,14 @@ struct Config {
     let barSize: CGFloat
     let pollInterval: Int  // in milliseconds
     let colors: ColorConfig
-    let components: [ComponentInstance]
 
     static let `default` = Config(
         aerospacePath: "/usr/local/bin/hyprspace",
         barPosition: .top,
         barSize: 25,
         pollInterval: 300,  // 300ms default
-        colors: .default,
-        components: defaultComponents()
+        colors: .default
     )
-
-    /// Default components (workspaces on left, clock on right)
-    private static func defaultComponents() -> [ComponentInstance] {
-        return [
-            ComponentInstance(
-                type: .workspaces,
-                centering: .left,
-                padding: ComponentPadding(top: 0, right: 0, bottom: 0, left: 8),
-                order: 0
-            ),
-            ComponentInstance(
-                type: .clock,
-                centering: .right,
-                padding: ComponentPadding(top: 0, right: 8, bottom: 0, left: 0),
-                order: 1
-            )
-        ]
-    }
 
     static func defaultBarSize(for position: BarPosition) -> CGFloat {
         switch position {
@@ -197,62 +177,6 @@ struct Config {
             colors = .default
         }
 
-        // Read [components] section - REQUIRED
-        let components: [ComponentInstance]
-        guard let componentsTable = table["components"]?.table else {
-            print(ComponentConfigError.missingComponentsSection.description)
-            exit(1)
-        }
-
-        components = parseComponents(from: componentsTable)
-
-        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, pollInterval: pollInterval, colors: colors, components: components)
-    }
-
-    /// Parse components from [components] table
-    private static func parseComponents(from table: TOMLTable) -> [ComponentInstance] {
-        var instances: [ComponentInstance] = []
-
-        // Iterate through component sections in order (preserves TOML order)
-        for (index, key) in table.keys.enumerated() {
-            // Validate component type
-            guard let componentType = ComponentType(rawValue: key) else {
-                print(ComponentConfigError.invalidComponent(key).description)
-                exit(1)
-            }
-
-            guard let componentTable = table[key]?.table else {
-                continue
-            }
-
-            // Centering is REQUIRED
-            guard let centeringString = componentTable["centering"]?.string,
-                  let centering = ComponentCentering(rawValue: centeringString) else {
-                print(ComponentConfigError.missingCentering(key).description)
-                exit(1)
-            }
-
-            // Padding is optional (defaults to zero)
-            let padding: ComponentPadding
-            if let paddingString = componentTable["padding"]?.string {
-                do {
-                    padding = try ComponentPadding(from: paddingString)
-                } catch {
-                    print(ComponentConfigError.invalidPadding(paddingString).description)
-                    exit(1)
-                }
-            } else {
-                padding = .zero
-            }
-
-            instances.append(ComponentInstance(
-                type: componentType,
-                centering: centering,
-                padding: padding,
-                order: index
-            ))
-        }
-
-        return instances
+        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, pollInterval: pollInterval, colors: colors)
     }
 }

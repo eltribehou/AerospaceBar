@@ -20,15 +20,11 @@ class MenuBarManager: ObservableObject {
         // Get initial workspaces
         refreshWorkspaces()
 
-        // Create component layout from config
-        let componentLayout = ComponentLayout(components: config.components)
-
         // Create the menubar window with the manager as observed object
         let contentView = MenuBarView(
             manager: self,
             barPosition: config.barPosition,
             colors: config.colors,
-            componentLayout: componentLayout,
             onWorkspaceClick: { [weak self] workspace in
                 self?.switchToWorkspace(workspace)
             },
