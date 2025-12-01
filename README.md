@@ -1,4 +1,4 @@
-# Aerospace Menubar
+# AerospaceBar
 
 A custom menubar for macOS that displays and allows switching between Hyprspace workspaces. Designed to replace the native macOS menubar when using the Aerospace window manager.
 
@@ -37,7 +37,7 @@ Or directly with Swift:
 swift build -c release
 ```
 
-The built binary will be at `.build/release/AerospaceMenubar`
+The built binary will be at `.build/release/AerospaceBar`
 
 ## Running
 
@@ -50,7 +50,7 @@ make run
 Or run the binary directly:
 
 ```bash
-.build/release/AerospaceMenubar
+.build/release/AerospaceBar
 ```
 
 Or run directly during development:

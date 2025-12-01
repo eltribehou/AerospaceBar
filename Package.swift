@@ -2,14 +2,14 @@
 import PackageDescription
 
 let package = Package(
-    name: "AerospaceMenubar",
+    name: "AerospaceBar",
     platforms: [
         .macOS(.v13)
     ],
     products: [
         .executable(
-            name: "AerospaceMenubar",
-            targets: ["AerospaceMenubar"]
+            name: "AerospaceBar",
+            targets: ["AerospaceBar"]
         )
     ],
     dependencies: [
@@ -17,7 +17,7 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "AerospaceMenubar",
+            name: "AerospaceBar",
             dependencies: ["TOMLKit"],
             path: "Sources"
         )

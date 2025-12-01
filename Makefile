@@ -9,11 +9,11 @@ build:
 
 # Run the project (builds if necessary)
 run: build
-	./.build/release/AerospaceMenubar
+	./.build/release/AerospaceBar
 
 # Install the executable to /Applications
 install: build
-	cp ./.build/release/AerospaceMenubar /Applications/AerospaceMenubar
+	cp ./.build/release/AerospaceBar /Applications/AerospaceBar
 
 # Clean build artifacts
 clean:
