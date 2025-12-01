@@ -30,7 +30,8 @@ class AppIconHelper {
             "/System/Applications/\(appName).app",
             "/Applications/Utilities/\(appName).app",
             "/System/Applications/Utilities/\(appName).app",
-            "~/Applications/\(appName).app".expandingTildeInPath
+            "~/Applications/\(appName).app".expandingTildeInPath,
+            "~/Applications/Chrome Apps.localized/\(appName).app".expandingTildeInPath
         ]
 
         for appPath in appPaths {
