@@ -1,92 +1,105 @@
 # AerospaceBar
 
-A custom menubar for macOS that displays and allows switching between Hyprspace workspaces. Designed to replace the native macOS menubar when using the Aerospace window manager.
+A minimalistic menubar for macOS designed specifically for [Aerospace](https://github.com/nikitabobko/AeroSpace).
+
+## What it is
+
+This is a very simple menubar to be used with Aerospace. As I hide the OSX menu bar for maximum screen real estate, I use this bar to display the workspaces, their running applications, and a clock.
+
+Unlike macOS menubar I can put it on the side, and it doesn't grab my attention with useless settings and clutter.
 
 ## Features
 
-- Custom menubar window at the top of the screen
-- Displays only workspaces that have apps running in them (current workspace always shown, even if empty)
-- Shows app icons for applications in each workspace (up to 3 icons, with a "+N" counter for additional apps)
-- Fullscreen apps are indicated with a small green badge overlay on their icons
-- Click any workspace to switch to it
-- Current workspace is highlighted in blue
-- Fast auto-refresh (300ms) for responsive workspace switching
-- Clock display (24-hour format) on the right side
-- Right-click context menu for quitting the app
-- Runs without a dock icon
-- Always visible across all spaces
-- Appears below the macOS menubar when it's shown (doesn't block access to system menu)
+- Display Aerospace workspaces
+- Display the running applications in each workspace with their icon
+- Display a green badge on fullscreen apps
+- A clock on the right or bottom depending on orientation.
+- Configurable colors 
+- Compatible with Hyprspace 
 
-## Requirements
+## Features that might be added
 
-- macOS 13.0+
-- Swift 5.9+
-- Hyprspace installed at `/usr/local/bin/hyprspace`
+- Display current keybind mode
+- Maybe, allow to place each element in a different location, specify padding, things like that
+- No proper external component system, I want to keep it simple and minimal, and lazy
+ 
+## Warnings
+
+- This app has been entirely generated with an LLM, vibe coded, yeah bro. 
+Can't be assled with learning swift or spending lots of time on something like this. 
+It works, fixes my problem. good enough for me. 
+I don't think it should stop you from making a MR if you want to. 
+- For now we simply call the aerospace cli every X ms to refresh the data, which is not ideal.   
+I thought there was no way around that but in fact Aerospace exposes callbacks which should allow to invert the flow, which will be much better. 
+To be done shortly. 
+
+
+## Configuration
+
+AerospaceBar looks for a configuration file in these locations (in order):
+- `~/.aerospacebar.toml`
+- `~/.config/aerospacebar/aerospacebar.toml`
+
+If no config file is found, it uses sensible defaults.
+
+### Configuration options
+
+```toml
+# Path to the aerospace binary
+# Default: "/usr/local/bin/aerospace"
+aerospace-path = "/usr/local/bin/aerospace"
+
+# Bar position: "top", "bottom", "left", or "right"
+# Default: "top"
+bar-position = "top"
+
+# Bar size in pixels
+# Default: 25 for top/bottom, 30 for left/right
+bar-size = 25
+
+# Workspace polling interval in milliseconds (minimum 100ms)
+# Default: 300
+aerospace-poll-interval = 300
+
+# Color customization (all colors support #RGB, #RRGGBB, #RRGGBBAA formats)
+[colors]
+background = "#1A1A1AF2"                    # Bar background
+workspace-active-background = "#0066CC99"   # Active workspace background
+workspace-hover-background = "#FFFFFF33"    # Workspace hover state
+workspace-default-background = "#FFFFFF1A"  # Default workspace background
+text-active = "#FFFFFF"                     # Active workspace text
+text-inactive = "#FFFFFFB3"                 # Inactive workspace text
+text-secondary = "#FFFFFF80"                # Secondary text (app counts)
+text-clock = "#FFFFFFE6"                    # Clock text
+fullscreen-badge-background = "#00FF00"     # Fullscreen indicator badge
+fullscreen-badge-symbol = "#FFFFFF"         # Fullscreen indicator symbol
+```
 
 ## Building
 
+### Requirements
+- macOS 13.0+
+- Swift 5.9+
+- Aerospace installed
+
+### Build commands
+
 Using the Makefile:
-
 ```bash
-make build
+make build          # Build release binary
+make run            # Build and run
+make install        # Build and install the App bundle to /Applications
 ```
 
-Or directly with Swift:
+The release binary will be at `.build/release/AerospaceBar`.
 
-```bash
-swift build -c release
-```
+## How it works
 
-The built binary will be at `.build/release/AerospaceBar`
+The app polls Aerospace every 300ms (configurable) to get workspace and window information:
+- Displays workspaces that have running applications
+- Always shows the current workspace (even if empty)
+- Shows up to 3 app icons per workspace (with a "+N" counter for more)
+- Green badge on fullscreen apps
+- Click a workspace to switch to it
+- Right-click anywhere for the quit menu
 
-## Running
-
-Using the Makefile (builds if necessary):
-
-```bash
-make run
-```
-
-Or run the binary directly:
-
-```bash
-.build/release/AerospaceBar
-```
-
-Or run directly during development:
-
-```bash
-swift run
-```
-
-## Installation
-
-To make it start automatically:
-
-1. Build the release binary
-2. Copy it to a permanent location (e.g., `~/bin/` or `/usr/local/bin/`)
-3. Add it to your login items in System Settings
-
-## Project Structure
-
-- `main.swift` - Entry point, starts the NSApplication
-- `AppDelegate.swift` - Handles app lifecycle
-- `MenuBarManager.swift` - Creates and manages the custom menubar window
-- `MenuBarView.swift` - SwiftUI view for the menubar UI
-- `AerospaceClient.swift` - Communicates with the hyprspace CLI
-- `AppIconHelper.swift` - Fetches and caches app icons using NSWorkspace
-- `AppInfo.swift` - Data structure holding app name and fullscreen status
-
-## How It Works
-
-The app creates a borderless window positioned at the top of the screen:
-- **AppKit NSWindow** - Borderless window positioned at screen top, always on top
-- **SwiftUI** - Modern UI showing workspace buttons with app icons
-- **Hyprspace CLI** - Queries workspaces and apps using:
-  - `list-workspaces --focused` - Get current workspace
-  - `list-windows --all --format "%{workspace}|%{app-name}|%{window-is-fullscreen}"` - Get apps per workspace with fullscreen status (determines which workspaces to show)
-  - `workspace <name>` - Switch to a workspace
-- **NSWorkspace** - Finds and loads app icons from the system
-- A fast 300ms timer keeps the workspace list and app icons up to date
-
-The menubar shows workspaces with running apps as clickable buttons, each displaying app icons (up to 3 per workspace, with "+N" for additional apps). The current workspace is always shown even if it has no apps, and is highlighted in blue. Fullscreen apps are indicated with a small green badge in the top-right corner of their icon. You can click any workspace to switch to it.
