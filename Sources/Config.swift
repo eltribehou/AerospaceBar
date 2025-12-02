@@ -73,14 +73,14 @@ struct Config {
     let aerospacePath: String
     let barPosition: BarPosition
     let barSize: CGFloat
-    let pollInterval: Int  // in milliseconds
+    let debounceInterval: Int  // in milliseconds
     let colors: ColorConfig
 
     static let `default` = Config(
         aerospacePath: "/usr/local/bin/hyprspace",
         barPosition: .top,
         barSize: 25,
-        pollInterval: 300,  // 300ms default
+        debounceInterval: 150,  // 150ms default - balances responsiveness and efficiency
         colors: .default
     )
 
@@ -144,18 +144,18 @@ struct Config {
             barSize = Config.defaultBarSize(for: barPosition)
         }
 
-        // Read aerospace-poll-interval setting, fall back to default if not specified
-        // Validate it's > 100ms to prevent excessive polling
-        let pollInterval: Int
-        if let intervalValue = table["aerospace-poll-interval"]?.int {
-            if intervalValue > 100 {
-                pollInterval = intervalValue
+        // Read refresh-debounce-interval setting, fall back to default if not specified
+        // Validate it's >= 50ms to prevent excessive refresh rates
+        let debounceInterval: Int
+        if let intervalValue = table["refresh-debounce-interval"]?.int {
+            if intervalValue >= 50 {
+                debounceInterval = intervalValue
             } else {
-                print("Warning: aerospace-poll-interval must be > 100ms, using default of 300ms")
-                pollInterval = Config.default.pollInterval
+                print("Warning: refresh-debounce-interval must be >= 50ms, using default of 150ms")
+                debounceInterval = Config.default.debounceInterval
             }
         } else {
-            pollInterval = Config.default.pollInterval
+            debounceInterval = Config.default.debounceInterval
         }
 
         // Read [colors] section if present
@@ -177,6 +177,6 @@ struct Config {
             colors = .default
         }
 
-        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, pollInterval: pollInterval, colors: colors)
+        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, debounceInterval: debounceInterval, colors: colors)
     }
 }

@@ -5,6 +5,11 @@ class MenuBarManager: ObservableObject {
     private var window: NSWindow?
     private let aerospaceClient: AerospaceClient
     private let config: Config
+
+    // Debounce timer to prevent excessive refresh calls during rapid events
+    // Uses trailing-edge debouncing: waits for activity to stop before refreshing
+    private var debounceTimer: Timer?
+
     @Published var workspaces: [String] = []
     @Published var currentWorkspace: String?
     @Published var appsPerWorkspace: [String: [AppInfo]] = [:]
@@ -14,10 +19,48 @@ class MenuBarManager: ObservableObject {
         let config = Config.load()
         self.config = config
         self.aerospaceClient = AerospaceClient(config: config)
+
+        // Set up distributed notification listener for external refresh requests
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleRefreshWindowsNotification),
+            name: NSNotification.Name("com.aerospacebar.refreshWindows"),
+            object: nil
+        )
+    }
+
+    deinit {
+        DistributedNotificationCenter.default().removeObserver(self)
+    }
+
+    @objc private func handleRefreshWindowsNotification() {
+        // Implement trailing-edge debouncing to batch rapid refresh requests
+        // This prevents CPU/IO spikes from rapid window/workspace events (e.g., Alt+Tab spam)
+
+        DebugLogger.log("Received refresh-windows notification")
+
+        // Cancel any pending refresh timer
+        if debounceTimer != nil {
+            DebugLogger.log("Cancelling pending debounce timer")
+            debounceTimer?.invalidate()
+        }
+
+        // Create new timer that will fire after the debounce interval
+        // Convert milliseconds to seconds for Timer
+        let debounceSeconds = TimeInterval(config.debounceInterval) / 1000.0
+
+        DebugLogger.log("Starting debounce timer (\(config.debounceInterval)ms)")
+
+        debounceTimer = Timer.scheduledTimer(withTimeInterval: debounceSeconds, repeats: false) { [weak self] _ in
+            // Timer fired - no more events for debounce duration, safe to refresh
+            DebugLogger.log("Debounce timer fired - executing refresh")
+            self?.refreshWorkspaces()
+        }
     }
 
     func setup() {
-        // Get initial workspaces
+        // Get initial workspaces (no debouncing on startup - need immediate state)
+        DebugLogger.log("App startup - performing initial workspace refresh")
         refreshWorkspaces()
 
         // Create the menubar window with the manager as observed object
@@ -52,13 +95,6 @@ class MenuBarManager: ObservableObject {
         window?.level = .floating
         window?.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         window?.makeKeyAndOrderFront(nil)
-
-        // Refresh workspaces periodically
-        // Convert pollInterval from milliseconds to seconds
-        let pollIntervalSeconds = TimeInterval(config.pollInterval) / 1000.0
-        Timer.scheduledTimer(withTimeInterval: pollIntervalSeconds, repeats: true) { [weak self] _ in
-            self?.refreshWorkspaces()
-        }
 
         // Update clock every second
         Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
@@ -109,6 +145,8 @@ class MenuBarManager: ObservableObject {
     }
 
     private func refreshWorkspaces() {
+        DebugLogger.log("Refreshing workspaces - querying Aerospace CLI")
+
         currentWorkspace = aerospaceClient.getCurrentWorkspace()
         var apps = aerospaceClient.getAppsPerWorkspace()
 
@@ -122,11 +160,16 @@ class MenuBarManager: ObservableObject {
 
         // Build workspace list
         workspaces = Array(apps.keys).sorted()
+
+        DebugLogger.log("Refresh complete - current workspace: \(currentWorkspace ?? "none"), \(workspaces.count) workspaces total")
     }
 
     private func switchToWorkspace(_ workspace: String) {
+        DebugLogger.log("User clicked workspace '\(workspace)' - switching and refreshing")
+
         aerospaceClient.switchToWorkspace(workspace)
-        // Refresh immediately after switching
+        // Refresh immediately after switching (no debouncing for user-initiated actions)
+        // Small delay allows Aerospace to complete the workspace switch
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             self?.refreshWorkspaces()
         }

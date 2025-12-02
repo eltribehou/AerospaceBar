@@ -25,13 +25,10 @@ Unlike macOS menubar I can put it on the side, and it doesn't grab my attention 
  
 ## Warnings
 
-- This app has been entirely generated with an LLM, vibe coded, yeah bro. 
-Can't be assled with learning swift or spending lots of time on something like this. 
-It works, fixes my problem. good enough for me. 
-I don't think it should stop you from making a MR if you want to. 
-- For now we simply call the aerospace cli every X ms to refresh the data, which is not ideal.   
-I thought there was no way around that but in fact Aerospace exposes callbacks which should allow to invert the flow, which will be much better. 
-To be done shortly. 
+- This app has been entirely generated with an LLM, vibe coded, yeah bro.
+Can't be bothered with learning swift or spending lots of time on something like this.
+It works, fixes my problem. good enough for me.
+I don't think it should stop you from making a MR if you want to.
 
 
 ## Configuration
@@ -57,9 +54,11 @@ bar-position = "top"
 # Default: 25 for top/bottom, 30 for left/right
 bar-size = 25
 
-# Workspace polling interval in milliseconds (minimum 100ms)
-# Default: 300
-aerospace-poll-interval = 300
+# Debounce interval for refresh requests in milliseconds
+# Batches rapid Aerospace callbacks to prevent CPU/IO spikes
+# Default: 150
+# Minimum: 50
+refresh-debounce-interval = 150
 
 # Color customization (all colors support #RGB, #RRGGBB, #RRGGBBAA formats)
 [colors]
@@ -75,6 +74,23 @@ fullscreen-badge-background = "#00FF00"     # Fullscreen indicator badge
 fullscreen-badge-symbol = "#FFFFFF"         # Fullscreen indicator symbol
 ```
 
+## Setting up Aerospace Callbacks
+
+AerospaceBar uses the Aerospace binary to get the current state of workspaces and windows. An initial call is made when the app launches, then AerospaceBar relies on Aerospace's callbacks to refresh when changes occur.
+
+Add the following to your Aerospace configuration file (`~/.aerospace.toml`):
+
+```toml
+# Refresh AerospaceBar when windows are created, closed, or moved
+[[on-window-detected]]
+exec-and-forget = ["aerospacebar", "--refresh-windows"]
+
+[[on-workspace-change]]
+exec-and-forget = ["aerospacebar", "--refresh-windows"]
+```
+
+This assumes you've installed AerospaceBar to `/usr/local/bin/aerospacebar` using `make install`. If you're running the binary from a different location, use the full path instead.
+
 ## Building
 
 ### Requirements
@@ -86,16 +102,44 @@ fullscreen-badge-symbol = "#FFFFFF"         # Fullscreen indicator symbol
 
 Using the Makefile:
 ```bash
-make build          # Build release binary
+make build          # Build release binary and .app bundle
 make run            # Build and run
-make install        # Build and install the App bundle to /Applications
+make debug          # Build and run with debug logging enabled
+make install        # Build and install the binary to /usr/local/bin/aerospacebar
 ```
 
 The release binary will be at `.build/release/AerospaceBar`.
 
+### Debug mode
+
+Run AerospaceBar with the `--debug` flag to enable verbose logging to stdout:
+
+```bash
+# Using make (easiest)
+make debug
+
+# Or run directly from build directory
+.build/release/AerospaceBar --debug
+
+# Or if installed
+/usr/local/bin/aerospacebar --debug
+```
+
+Debug logs show:
+- When refresh requests are received from Aerospace callbacks
+- Debounce timer activity (started, cancelled, fired)
+- When actual workspace refreshes occur
+- Current workspace and workspace count after each refresh
+- User-initiated workspace switches
+
+This is useful for understanding the debouncing behavior and troubleshooting refresh issues.
+
 ## How it works
 
-The app polls Aerospace every 300ms (configurable) to get workspace and window information:
+The app uses an event-driven architecture - Aerospace callbacks trigger refreshes when windows or workspaces change:
+- Aerospace calls `aerospacebar --refresh-windows` on window/workspace events
+- The command sends a distributed notification to the running instance
+- The menubar updates immediately with current workspace and window information
 - Displays workspaces that have running applications
 - Always shows the current workspace (even if empty)
 - Shows up to 3 app icons per workspace (with a "+N" counter for more)
