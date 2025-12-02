@@ -109,6 +109,27 @@ make install        # Build and install the binary to /usr/local/bin/aerospaceba
 
 The release binary will be at `.build/release/AerospaceBar`.
 
+### Debug mode
+
+Run AerospaceBar with the `--debug` flag to enable verbose logging to stdout:
+
+```bash
+# If running from build directory
+.build/release/AerospaceBar --debug
+
+# If installed
+/usr/local/bin/aerospacebar --debug
+```
+
+Debug logs show:
+- When refresh requests are received from Aerospace callbacks
+- Debounce timer activity (started, cancelled, fired)
+- When actual workspace refreshes occur
+- Current workspace and workspace count after each refresh
+- User-initiated workspace switches
+
+This is useful for understanding the debouncing behavior and troubleshooting refresh issues.
+
 ## How it works
 
 The app uses an event-driven architecture - Aerospace callbacks trigger refreshes when windows or workspaces change:

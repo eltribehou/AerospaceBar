@@ -37,21 +37,30 @@ class MenuBarManager: ObservableObject {
         // Implement trailing-edge debouncing to batch rapid refresh requests
         // This prevents CPU/IO spikes from rapid window/workspace events (e.g., Alt+Tab spam)
 
+        DebugLogger.log("Received refresh-windows notification")
+
         // Cancel any pending refresh timer
-        debounceTimer?.invalidate()
+        if debounceTimer != nil {
+            DebugLogger.log("Cancelling pending debounce timer")
+            debounceTimer?.invalidate()
+        }
 
         // Create new timer that will fire after the debounce interval
         // Convert milliseconds to seconds for Timer
         let debounceSeconds = TimeInterval(config.debounceInterval) / 1000.0
 
+        DebugLogger.log("Starting debounce timer (\(config.debounceInterval)ms)")
+
         debounceTimer = Timer.scheduledTimer(withTimeInterval: debounceSeconds, repeats: false) { [weak self] _ in
             // Timer fired - no more events for debounce duration, safe to refresh
+            DebugLogger.log("Debounce timer fired - executing refresh")
             self?.refreshWorkspaces()
         }
     }
 
     func setup() {
         // Get initial workspaces (no debouncing on startup - need immediate state)
+        DebugLogger.log("App startup - performing initial workspace refresh")
         refreshWorkspaces()
 
         // Create the menubar window with the manager as observed object
@@ -136,6 +145,8 @@ class MenuBarManager: ObservableObject {
     }
 
     private func refreshWorkspaces() {
+        DebugLogger.log("Refreshing workspaces - querying Aerospace CLI")
+
         currentWorkspace = aerospaceClient.getCurrentWorkspace()
         var apps = aerospaceClient.getAppsPerWorkspace()
 
@@ -149,9 +160,13 @@ class MenuBarManager: ObservableObject {
 
         // Build workspace list
         workspaces = Array(apps.keys).sorted()
+
+        DebugLogger.log("Refresh complete - current workspace: \(currentWorkspace ?? "none"), \(workspaces.count) workspaces total")
     }
 
     private func switchToWorkspace(_ workspace: String) {
+        DebugLogger.log("User clicked workspace '\(workspace)' - switching and refreshing")
+
         aerospaceClient.switchToWorkspace(workspace)
         // Refresh immediately after switching (no debouncing for user-initiated actions)
         // Small delay allows Aerospace to complete the workspace switch
