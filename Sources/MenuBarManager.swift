@@ -5,6 +5,11 @@ class MenuBarManager: ObservableObject {
     private var window: NSWindow?
     private let aerospaceClient: AerospaceClient
     private let config: Config
+
+    // Debounce timer to prevent excessive refresh calls during rapid events
+    // Uses trailing-edge debouncing: waits for activity to stop before refreshing
+    private var debounceTimer: Timer?
+
     @Published var workspaces: [String] = []
     @Published var currentWorkspace: String?
     @Published var appsPerWorkspace: [String: [AppInfo]] = [:]
@@ -29,11 +34,24 @@ class MenuBarManager: ObservableObject {
     }
 
     @objc private func handleRefreshWindowsNotification() {
-        refreshWorkspaces()
+        // Implement trailing-edge debouncing to batch rapid refresh requests
+        // This prevents CPU/IO spikes from rapid window/workspace events (e.g., Alt+Tab spam)
+
+        // Cancel any pending refresh timer
+        debounceTimer?.invalidate()
+
+        // Create new timer that will fire after the debounce interval
+        // Convert milliseconds to seconds for Timer
+        let debounceSeconds = TimeInterval(config.debounceInterval) / 1000.0
+
+        debounceTimer = Timer.scheduledTimer(withTimeInterval: debounceSeconds, repeats: false) { [weak self] _ in
+            // Timer fired - no more events for debounce duration, safe to refresh
+            self?.refreshWorkspaces()
+        }
     }
 
     func setup() {
-        // Get initial workspaces
+        // Get initial workspaces (no debouncing on startup - need immediate state)
         refreshWorkspaces()
 
         // Create the menubar window with the manager as observed object
@@ -135,7 +153,8 @@ class MenuBarManager: ObservableObject {
 
     private func switchToWorkspace(_ workspace: String) {
         aerospaceClient.switchToWorkspace(workspace)
-        // Refresh immediately after switching
+        // Refresh immediately after switching (no debouncing for user-initiated actions)
+        // Small delay allows Aerospace to complete the workspace switch
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
             self?.refreshWorkspaces()
         }

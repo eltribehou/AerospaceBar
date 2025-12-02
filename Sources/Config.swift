@@ -73,12 +73,14 @@ struct Config {
     let aerospacePath: String
     let barPosition: BarPosition
     let barSize: CGFloat
+    let debounceInterval: Int  // in milliseconds
     let colors: ColorConfig
 
     static let `default` = Config(
         aerospacePath: "/usr/local/bin/hyprspace",
         barPosition: .top,
         barSize: 25,
+        debounceInterval: 150,  // 150ms default - balances responsiveness and efficiency
         colors: .default
     )
 
@@ -142,6 +144,20 @@ struct Config {
             barSize = Config.defaultBarSize(for: barPosition)
         }
 
+        // Read refresh-debounce-interval setting, fall back to default if not specified
+        // Validate it's >= 50ms to prevent excessive refresh rates
+        let debounceInterval: Int
+        if let intervalValue = table["refresh-debounce-interval"]?.int {
+            if intervalValue >= 50 {
+                debounceInterval = intervalValue
+            } else {
+                print("Warning: refresh-debounce-interval must be >= 50ms, using default of 150ms")
+                debounceInterval = Config.default.debounceInterval
+            }
+        } else {
+            debounceInterval = Config.default.debounceInterval
+        }
+
         // Read [colors] section if present
         let colors: ColorConfig
         if let colorsTable = table["colors"]?.table {
@@ -161,6 +177,6 @@ struct Config {
             colors = .default
         }
 
-        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, colors: colors)
+        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, debounceInterval: debounceInterval, colors: colors)
     }
 }

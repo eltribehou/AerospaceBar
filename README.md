@@ -54,6 +54,12 @@ bar-position = "top"
 # Default: 25 for top/bottom, 30 for left/right
 bar-size = 25
 
+# Debounce interval for refresh requests in milliseconds
+# Batches rapid Aerospace callbacks to prevent CPU/IO spikes
+# Default: 150
+# Minimum: 50
+refresh-debounce-interval = 150
+
 # Color customization (all colors support #RGB, #RRGGBB, #RRGGBBAA formats)
 [colors]
 background = "#1A1A1AF2"                    # Bar background
@@ -70,7 +76,7 @@ fullscreen-badge-symbol = "#FFFFFF"         # Fullscreen indicator symbol
 
 ## Setting up Aerospace Callbacks
 
-AerospaceBar uses an event-driven approach instead of polling. You need to configure Aerospace to call AerospaceBar when windows or workspaces change.
+AerospaceBar uses the Aerospace binary to get the current state of workspaces and windows. An initial call is made when the app launches, then AerospaceBar relies on Aerospace's callbacks to refresh when changes occur.
 
 Add the following to your Aerospace configuration file (`~/.aerospace.toml`):
 
