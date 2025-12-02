@@ -104,6 +104,7 @@ Using the Makefile:
 ```bash
 make build          # Build release binary and .app bundle
 make run            # Build and run
+make debug          # Build and run with debug logging enabled
 make install        # Build and install the binary to /usr/local/bin/aerospacebar
 ```
 
@@ -114,10 +115,13 @@ The release binary will be at `.build/release/AerospaceBar`.
 Run AerospaceBar with the `--debug` flag to enable verbose logging to stdout:
 
 ```bash
-# If running from build directory
+# Using make (easiest)
+make debug
+
+# Or run directly from build directory
 .build/release/AerospaceBar --debug
 
-# If installed
+# Or if installed
 /usr/local/bin/aerospacebar --debug
 ```
 

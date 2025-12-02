@@ -1,4 +1,4 @@
-.PHONY: build build-binary run clean install app
+.PHONY: build build-binary run debug clean install app
 
 # Build directory for all generated files
 BUILD_DIR = .build
@@ -63,6 +63,10 @@ app: build
 # Run the project (builds if necessary)
 run: build
 	./.build/release/AerospaceBar
+
+# Run the project in debug mode with verbose logging
+debug: build
+	./.build/release/AerospaceBar --debug
 
 # Install the binary to /usr/local/bin
 install: build-binary
