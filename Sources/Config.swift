@@ -73,14 +73,12 @@ struct Config {
     let aerospacePath: String
     let barPosition: BarPosition
     let barSize: CGFloat
-    let pollInterval: Int  // in milliseconds
     let colors: ColorConfig
 
     static let `default` = Config(
         aerospacePath: "/usr/local/bin/hyprspace",
         barPosition: .top,
         barSize: 25,
-        pollInterval: 300,  // 300ms default
         colors: .default
     )
 
@@ -144,20 +142,6 @@ struct Config {
             barSize = Config.defaultBarSize(for: barPosition)
         }
 
-        // Read aerospace-poll-interval setting, fall back to default if not specified
-        // Validate it's > 100ms to prevent excessive polling
-        let pollInterval: Int
-        if let intervalValue = table["aerospace-poll-interval"]?.int {
-            if intervalValue > 100 {
-                pollInterval = intervalValue
-            } else {
-                print("Warning: aerospace-poll-interval must be > 100ms, using default of 300ms")
-                pollInterval = Config.default.pollInterval
-            }
-        } else {
-            pollInterval = Config.default.pollInterval
-        }
-
         // Read [colors] section if present
         let colors: ColorConfig
         if let colorsTable = table["colors"]?.table {
@@ -177,6 +161,6 @@ struct Config {
             colors = .default
         }
 
-        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, pollInterval: pollInterval, colors: colors)
+        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, colors: colors)
     }
 }

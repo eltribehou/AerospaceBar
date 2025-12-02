@@ -25,13 +25,10 @@ Unlike macOS menubar I can put it on the side, and it doesn't grab my attention 
  
 ## Warnings
 
-- This app has been entirely generated with an LLM, vibe coded, yeah bro. 
-Can't be assled with learning swift or spending lots of time on something like this. 
-It works, fixes my problem. good enough for me. 
-I don't think it should stop you from making a MR if you want to. 
-- For now we simply call the aerospace cli every X ms to refresh the data, which is not ideal.   
-I thought there was no way around that but in fact Aerospace exposes callbacks which should allow to invert the flow, which will be much better. 
-To be done shortly. 
+- This app has been entirely generated with an LLM, vibe coded, yeah bro.
+Can't be bothered with learning swift or spending lots of time on something like this.
+It works, fixes my problem. good enough for me.
+I don't think it should stop you from making a MR if you want to.
 
 
 ## Configuration
@@ -57,10 +54,6 @@ bar-position = "top"
 # Default: 25 for top/bottom, 30 for left/right
 bar-size = 25
 
-# Workspace polling interval in milliseconds (minimum 100ms)
-# Default: 300
-aerospace-poll-interval = 300
-
 # Color customization (all colors support #RGB, #RRGGBB, #RRGGBBAA formats)
 [colors]
 background = "#1A1A1AF2"                    # Bar background
@@ -75,6 +68,23 @@ fullscreen-badge-background = "#00FF00"     # Fullscreen indicator badge
 fullscreen-badge-symbol = "#FFFFFF"         # Fullscreen indicator symbol
 ```
 
+## Setting up Aerospace Callbacks
+
+AerospaceBar uses an event-driven approach instead of polling. You need to configure Aerospace to call AerospaceBar when windows or workspaces change.
+
+Add the following to your Aerospace configuration file (`~/.aerospace.toml`):
+
+```toml
+# Refresh AerospaceBar when windows are created, closed, or moved
+[[on-window-detected]]
+exec-and-forget = ["aerospacebar", "--refresh-windows"]
+
+[[on-workspace-change]]
+exec-and-forget = ["aerospacebar", "--refresh-windows"]
+```
+
+This assumes you've installed AerospaceBar to `/usr/local/bin/aerospacebar` using `make install`. If you're running the binary from a different location, use the full path instead.
+
 ## Building
 
 ### Requirements
@@ -86,16 +96,19 @@ fullscreen-badge-symbol = "#FFFFFF"         # Fullscreen indicator symbol
 
 Using the Makefile:
 ```bash
-make build          # Build release binary
+make build          # Build release binary and .app bundle
 make run            # Build and run
-make install        # Build and install the App bundle to /Applications
+make install        # Build and install the binary to /usr/local/bin/aerospacebar
 ```
 
 The release binary will be at `.build/release/AerospaceBar`.
 
 ## How it works
 
-The app polls Aerospace every 300ms (configurable) to get workspace and window information:
+The app uses an event-driven architecture - Aerospace callbacks trigger refreshes when windows or workspaces change:
+- Aerospace calls `aerospacebar --refresh-windows` on window/workspace events
+- The command sends a distributed notification to the running instance
+- The menubar updates immediately with current workspace and window information
 - Displays workspaces that have running applications
 - Always shows the current workspace (even if empty)
 - Shows up to 3 app icons per workspace (with a "+N" counter for more)

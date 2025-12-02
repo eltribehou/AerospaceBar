@@ -14,6 +14,22 @@ class MenuBarManager: ObservableObject {
         let config = Config.load()
         self.config = config
         self.aerospaceClient = AerospaceClient(config: config)
+
+        // Set up distributed notification listener for external refresh requests
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleRefreshWindowsNotification),
+            name: NSNotification.Name("com.aerospacebar.refreshWindows"),
+            object: nil
+        )
+    }
+
+    deinit {
+        DistributedNotificationCenter.default().removeObserver(self)
+    }
+
+    @objc private func handleRefreshWindowsNotification() {
+        refreshWorkspaces()
     }
 
     func setup() {
@@ -52,13 +68,6 @@ class MenuBarManager: ObservableObject {
         window?.level = .floating
         window?.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
         window?.makeKeyAndOrderFront(nil)
-
-        // Refresh workspaces periodically
-        // Convert pollInterval from milliseconds to seconds
-        let pollIntervalSeconds = TimeInterval(config.pollInterval) / 1000.0
-        Timer.scheduledTimer(withTimeInterval: pollIntervalSeconds, repeats: true) { [weak self] _ in
-            self?.refreshWorkspaces()
-        }
 
         // Update clock every second
         Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in

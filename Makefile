@@ -64,16 +64,11 @@ app: build
 run: build
 	./.build/release/AerospaceBar
 
-# Install the .app bundle to /Applications (requires sudo, but doesn't rebuild)
-install:
-	@if [ ! -d "$(BUILD_DIR)/AerospaceBar.app" ]; then \
-		echo "Error: $(BUILD_DIR)/AerospaceBar.app not found. Run 'make app' first."; \
-		exit 1; \
-	fi
-	@echo "Installing AerospaceBar.app to /Applications..."
-	@rm -rf /Applications/AerospaceBar.app
-	@cp -r $(BUILD_DIR)/AerospaceBar.app /Applications/
-	@echo "Installed successfully. You may need to restart Spotlight/Alfred for it to be indexed."
+# Install the binary to /usr/local/bin
+install: build-binary
+	@echo "Installing AerospaceBar to /usr/local/bin..."
+	@sudo cp $(BUILD_DIR)/release/AerospaceBar /usr/local/bin/aerospacebar
+	@echo "Installed successfully to /usr/local/bin/aerospacebar"
 
 # Clean build artifacts
 clean:
