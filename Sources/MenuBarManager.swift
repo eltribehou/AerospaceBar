@@ -119,6 +119,7 @@ class MenuBarManager: ObservableObject {
         let contentView = MenuBarView(
             manager: self,
             barPosition: config.barPosition,
+            barOpacity: config.barOpacity,
             colors: config.colors,
             onWorkspaceClick: { [weak self] workspace in
                 self?.switchToWorkspace(workspace)
@@ -142,7 +143,7 @@ class MenuBarManager: ObservableObject {
         )
 
         window?.contentView = hostingView
-        window?.backgroundColor = NSColor(config.colors.background)
+        window?.backgroundColor = .clear  // Let SwiftUI handle the background with opacity
         window?.isOpaque = false
         window?.level = .floating
         window?.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]

@@ -18,6 +18,11 @@ bar-position = "top"
 # Default: 25 for horizontal (top/bottom), 30 for vertical (left/right)
 bar-size = 25
 
+# Opacity of the menubar background
+# Range: 0.0 (fully transparent) to 1.0 (fully opaque)
+# Default: 1.0
+bar-opacity = 1.0
+
 # Debounce interval for refresh requests (in milliseconds)
 # Batches rapid Aerospace callbacks to prevent CPU/IO spikes
 # Lower values = more responsive, higher CPU usage

@@ -14,7 +14,9 @@ Unlike macOS menubar I can put it on the side, and it doesn't grab my attention 
 - Display the running applications in each workspace with their icon
 - Display a green badge on fullscreen apps
 - Display current Aerospace keybind mode (optional, configurable)
-- A clock on the right or bottom depending on orientation.
+- Display current audio output device with icon
+- A clock on the right or bottom depending on orientation
+- Configurable bar opacity for transparency
 - Configurable colors
 - Compatible with Hyprspace
 
@@ -54,6 +56,10 @@ bar-position = "top"
 # Default: 25 for top/bottom, 30 for left/right
 bar-size = 25
 
+# Bar opacity (0.0 = fully transparent, 1.0 = fully opaque)
+# Default: 1.0
+bar-opacity = 1.0
+
 # Debounce interval for refresh requests in milliseconds
 # Batches rapid Aerospace callbacks to prevent CPU/IO spikes
 # Default: 150
@@ -67,6 +73,8 @@ refresh-debounce-interval = 150
 mode-command = "list-modes --current"
 
 # Color customization (all colors support #RGB, #RRGGBB, #RRGGBBAA formats)
+# Note: For the background color, bar-opacity overrides any alpha value
+#       All other colors preserve their alpha components
 [colors]
 background = "#1A1A1AF2"                    # Bar background
 workspace-active-background = "#0066CC99"   # Active workspace background
@@ -136,13 +144,24 @@ make debug
 ```
 
 Debug logs show:
-- When refresh requests are received from Aerospace callbacks (windows and mode)
-- Debounce timer activity (started, cancelled, fired) for both windows and mode
-- When actual workspace and mode refreshes occur
-- Current workspace, workspace count, and mode after each refresh
+- When refresh requests are received from Aerospace callbacks (windows, mode, audio)
+- Debounce timer activity (started, cancelled, fired) for windows and mode
+- When actual workspace, mode, and audio refreshes occur
+- Current workspace, workspace count, mode, and audio device after each refresh
 - User-initiated workspace switches
 
 This is useful for understanding the debouncing behavior and troubleshooting refresh issues.
+
+### Audio Output Display
+
+The menubar displays the current audio output device with an icon (or device name as fallback):
+
+```bash
+# Manually refresh audio display (e.g., from audio switch script)
+aerospacebar --refresh-audio
+```
+
+You can call this from your audio switching script to update the display immediately after changing devices.
 
 ## How it works
 
@@ -154,7 +173,9 @@ The app uses an event-driven architecture - Aerospace callbacks trigger refreshe
 - Always shows the current workspace (even if empty)
 - Shows up to 3 app icons per workspace (with a "+N" counter for more)
 - Green badge on fullscreen apps
-- Displays current Aerospace keybind mode (if configured) before the clock
+- Displays current Aerospace keybind mode (if configured)
+- Displays current audio output device with SF Symbol icon
+- Clock on the right/bottom
 - Click a workspace to switch to it
 - Right-click anywhere for the quit menu
 

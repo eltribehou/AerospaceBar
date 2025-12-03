@@ -73,6 +73,7 @@ struct Config {
     let aerospacePath: String
     let barPosition: BarPosition
     let barSize: CGFloat
+    let barOpacity: Double  // 0.0 (transparent) to 1.0 (opaque)
     let debounceInterval: Int  // in milliseconds
     let modeCommand: String?  // Optional command to get current mode (e.g., "list-modes --current")
     let colors: ColorConfig
@@ -81,6 +82,7 @@ struct Config {
         aerospacePath: "/usr/local/bin/hyprspace",
         barPosition: .top,
         barSize: 25,
+        barOpacity: 1.0,  // Fully opaque by default
         debounceInterval: 150,  // 150ms default - balances responsiveness and efficiency
         modeCommand: nil,  // Disabled by default
         colors: .default
@@ -104,13 +106,24 @@ struct Config {
 
         for path in possiblePaths {
             if FileManager.default.fileExists(atPath: path) {
+                print("[CONFIG] Found config file at: \(path)")
+                DebugLogger.log("Found config file at: \(path)")
                 if let config = try? loadFromFile(path: path) {
+                    print("[CONFIG] Loaded - position: \(config.barPosition), opacity: \(config.barOpacity), mode-command: \(config.modeCommand ?? "nil")")
+                    DebugLogger.log("Loaded config - position: \(config.barPosition), opacity: \(config.barOpacity), mode-command: \(config.modeCommand ?? "nil")")
                     return config
+                } else {
+                    print("[CONFIG] Failed to parse config file at: \(path)")
+                    DebugLogger.log("Failed to parse config file at: \(path)")
                 }
             }
         }
 
         // Return default if no config file found
+        print("[CONFIG] No config file found, using defaults")
+
+        // Return default if no config file found
+        DebugLogger.log("No config file found, using defaults")
         return .default
     }
 
@@ -144,6 +157,15 @@ struct Config {
             barSize = CGFloat(sizeValue)
         } else {
             barSize = Config.defaultBarSize(for: barPosition)
+        }
+
+        // Read bar-opacity setting, fall back to default (1.0) if not specified
+        // Clamp to valid range [0.0, 1.0]
+        let barOpacity: Double
+        if let opacityValue = table["bar-opacity"]?.double {
+            barOpacity = max(0.0, min(1.0, opacityValue))
+        } else {
+            barOpacity = Config.default.barOpacity
         }
 
         // Read refresh-debounce-interval setting, fall back to default if not specified
@@ -183,6 +205,6 @@ struct Config {
             colors = .default
         }
 
-        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, debounceInterval: debounceInterval, modeCommand: modeCommand, colors: colors)
+        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, barOpacity: barOpacity, debounceInterval: debounceInterval, modeCommand: modeCommand, colors: colors)
     }
 }
