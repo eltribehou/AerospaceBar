@@ -68,11 +68,16 @@ run: build
 debug: build
 	./.build/release/AerospaceBar --debug
 
-# Install the binary to /usr/local/bin
-install: build-binary
-	@echo "Installing AerospaceBar to /usr/local/bin..."
+# Install the binary to /usr/local/bin and app bundle to /Applications
+install: build
+	@echo "Installing AerospaceBar binary to /usr/local/bin..."
 	@sudo cp $(BUILD_DIR)/release/AerospaceBar /usr/local/bin/aerospacebar
-	@echo "Installed successfully to /usr/local/bin/aerospacebar"
+	@echo "Installing AerospaceBar.app to /Applications..."
+	@sudo rm -rf /Applications/AerospaceBar.app
+	@sudo cp -R $(BUILD_DIR)/AerospaceBar.app /Applications/
+	@echo "Installation complete:"
+	@echo "  - Binary: /usr/local/bin/aerospacebar"
+	@echo "  - App:    /Applications/AerospaceBar.app"
 
 # Clean build artifacts
 clean:
