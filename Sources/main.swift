@@ -10,6 +10,7 @@ func printHelp() {
     Options:
       --refresh-windows    Send refresh notification to update workspaces and windows
       --refresh-mode       Send refresh notification to update mode display
+      --refresh-audio      Send refresh notification to update audio output display
       --debug              Enable debug logging output
       -h, --help           Display this help message
 
@@ -27,7 +28,7 @@ if arguments.contains("-h") || arguments.contains("--help") {
 }
 
 // Validate arguments - check for unknown flags
-let validFlags = ["--refresh-windows", "--refresh-mode", "--debug", "-h", "--help"]
+let validFlags = ["--refresh-windows", "--refresh-mode", "--refresh-audio", "--debug", "-h", "--help"]
 let providedFlags = arguments.dropFirst().filter { $0.hasPrefix("-") }
 
 for flag in providedFlags {
@@ -53,6 +54,16 @@ if arguments.contains("--refresh-mode") {
     // Post distributed notification to running AerospaceBar instance
     DistributedNotificationCenter.default().post(
         name: NSNotification.Name("com.aerospacebar.refreshMode"),
+        object: nil
+    )
+    exit(0)
+}
+
+// Check if we're being called to trigger an audio refresh
+if arguments.contains("--refresh-audio") {
+    // Post distributed notification to running AerospaceBar instance
+    DistributedNotificationCenter.default().post(
+        name: NSNotification.Name("com.aerospacebar.refreshAudio"),
         object: nil
     )
     exit(0)

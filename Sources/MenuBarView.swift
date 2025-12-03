@@ -47,8 +47,9 @@ struct MenuBarView: View {
 
             Spacer()
 
-            // Mode (if active) + Clock on the right
+            // Mode (if active) + Audio + Clock on the right
             ModeView(isVertical: false, currentMode: manager.currentMode, colors: colors)
+            AudioOutputView(isVertical: false, audioDevice: manager.currentAudioDevice, colors: colors)
             ClockView(isVertical: false, currentTime: manager.currentTime, colors: colors)
                 .padding(.trailing, 8)
         }
@@ -75,8 +76,9 @@ struct MenuBarView: View {
 
             Spacer()
 
-            // Mode (if active) + Clock on the bottom
+            // Mode (if active) + Audio + Clock on the bottom
             ModeView(isVertical: true, currentMode: manager.currentMode, colors: colors)
+            AudioOutputView(isVertical: true, audioDevice: manager.currentAudioDevice, colors: colors)
             ClockView(isVertical: true, currentTime: manager.currentTime, colors: colors)
                 .padding(.bottom, 8)
         }
@@ -235,6 +237,34 @@ struct ModeView: View {
                 .font(.system(size: isVertical ? 8 : 11, weight: .medium))
                 .foregroundColor(colors.textInactive)
                 .padding(isVertical ? .bottom : .trailing, 4)  // Small spacing before clock
+        }
+    }
+}
+
+struct AudioOutputView: View {
+    let isVertical: Bool
+    let audioDevice: AudioDeviceInfo?
+    let colors: ColorConfig
+
+    var body: some View {
+        // Only render if audio device info is available
+        if let device = audioDevice {
+            Group {
+                if let icon = device.icon {
+                    // Display device icon
+                    Image(nsImage: icon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: isVertical ? 14 : 16, height: isVertical ? 14 : 16)
+                } else {
+                    // Fall back to device name text
+                    Text(device.name)
+                        .font(.system(size: isVertical ? 8 : 11, weight: .regular))
+                        .foregroundColor(colors.textInactive)
+                        .lineLimit(1)
+                }
+            }
+            .padding(isVertical ? .bottom : .trailing, 4)  // Small spacing before clock
         }
     }
 }

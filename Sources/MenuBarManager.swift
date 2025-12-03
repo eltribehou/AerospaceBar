@@ -4,6 +4,7 @@ import SwiftUI
 class MenuBarManager: ObservableObject {
     private var window: NSWindow?
     private let aerospaceClient: AerospaceClient
+    private let audioClient: AudioClient
     private let config: Config
 
     // Debounce timers to prevent excessive refresh calls during rapid events
@@ -16,11 +17,13 @@ class MenuBarManager: ObservableObject {
     @Published var appsPerWorkspace: [String: [AppInfo]] = [:]
     @Published var currentTime = Date()
     @Published var currentMode: String?  // Current Aerospace keybind mode (nil if mode-command not configured)
+    @Published var currentAudioDevice: AudioDeviceInfo?  // Current audio output device
 
     init() {
         let config = Config.load()
         self.config = config
         self.aerospaceClient = AerospaceClient(config: config)
+        self.audioClient = AudioClient()
 
         // Set up distributed notification listeners for external refresh requests
         DistributedNotificationCenter.default().addObserver(
@@ -34,6 +37,13 @@ class MenuBarManager: ObservableObject {
             self,
             selector: #selector(handleRefreshModeNotification),
             name: NSNotification.Name("com.aerospacebar.refreshMode"),
+            object: nil
+        )
+
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleRefreshAudioNotification),
+            name: NSNotification.Name("com.aerospacebar.refreshAudio"),
             object: nil
         )
     }
@@ -92,11 +102,18 @@ class MenuBarManager: ObservableObject {
         }
     }
 
+    @objc private func handleRefreshAudioNotification() {
+        // Audio refresh without debouncing - typically called manually after device switch
+        DebugLogger.log("Received refresh-audio notification")
+        refreshAudio()
+    }
+
     func setup() {
-        // Get initial workspaces and mode (no debouncing on startup - need immediate state)
-        DebugLogger.log("App startup - performing initial workspace and mode refresh")
+        // Get initial workspaces, mode, and audio (no debouncing on startup - need immediate state)
+        DebugLogger.log("App startup - performing initial workspace, mode, and audio refresh")
         refreshWorkspaces()
         refreshMode()
+        refreshAudio()
 
         // Create the menubar window with the manager as observed object
         let contentView = MenuBarView(
@@ -205,6 +222,18 @@ class MenuBarManager: ObservableObject {
         currentMode = aerospaceClient.getCurrentMode()
 
         DebugLogger.log("Mode refresh complete - current mode: \(currentMode ?? "none")")
+    }
+
+    private func refreshAudio() {
+        DebugLogger.log("Refreshing audio output device")
+
+        currentAudioDevice = audioClient.getCurrentOutputDevice()
+
+        if let device = currentAudioDevice {
+            DebugLogger.log("Audio refresh complete - device: \(device.name)")
+        } else {
+            DebugLogger.log("Audio refresh complete - no device found")
+        }
     }
 
     private func switchToWorkspace(_ workspace: String) {
