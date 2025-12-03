@@ -26,25 +26,31 @@ class MenuBarManager: ObservableObject {
         self.audioClient = AudioClient()
 
         // Set up distributed notification listeners for external refresh requests
-        DistributedNotificationCenter.default().addObserver(
+        // Use suspensionBehavior: .deliverImmediately to ensure notifications are received
+        // even when the app might be considered "inactive"
+        let center = DistributedNotificationCenter.default()
+        center.addObserver(
             self,
             selector: #selector(handleRefreshWindowsNotification),
             name: NSNotification.Name("com.aerospacebar.refreshWindows"),
-            object: nil
+            object: nil,
+            suspensionBehavior: .deliverImmediately
         )
 
-        DistributedNotificationCenter.default().addObserver(
+        center.addObserver(
             self,
             selector: #selector(handleRefreshModeNotification),
             name: NSNotification.Name("com.aerospacebar.refreshMode"),
-            object: nil
+            object: nil,
+            suspensionBehavior: .deliverImmediately
         )
 
-        DistributedNotificationCenter.default().addObserver(
+        center.addObserver(
             self,
             selector: #selector(handleRefreshAudioNotification),
             name: NSNotification.Name("com.aerospacebar.refreshAudio"),
-            object: nil
+            object: nil,
+            suspensionBehavior: .deliverImmediately
         )
     }
 
