@@ -74,6 +74,7 @@ struct Config {
     let barPosition: BarPosition
     let barSize: CGFloat
     let debounceInterval: Int  // in milliseconds
+    let modeCommand: String?  // Optional command to get current mode (e.g., "list-modes --current")
     let colors: ColorConfig
 
     static let `default` = Config(
@@ -81,6 +82,7 @@ struct Config {
         barPosition: .top,
         barSize: 25,
         debounceInterval: 150,  // 150ms default - balances responsiveness and efficiency
+        modeCommand: nil,  // Disabled by default
         colors: .default
     )
 
@@ -158,6 +160,10 @@ struct Config {
             debounceInterval = Config.default.debounceInterval
         }
 
+        // Read mode-command setting (optional)
+        // Full command with parameters to get current mode (e.g., "list-modes --current")
+        let modeCommand: String? = table["mode-command"]?.string
+
         // Read [colors] section if present
         let colors: ColorConfig
         if let colorsTable = table["colors"]?.table {
@@ -177,6 +183,6 @@ struct Config {
             colors = .default
         }
 
-        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, debounceInterval: debounceInterval, colors: colors)
+        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, debounceInterval: debounceInterval, modeCommand: modeCommand, colors: colors)
     }
 }

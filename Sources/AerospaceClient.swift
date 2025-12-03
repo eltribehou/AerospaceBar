@@ -2,8 +2,10 @@ import Foundation
 
 class AerospaceClient {
     private let aerospaceCommand: String
+    private let config: Config
 
     init(config: Config) {
+        self.config = config
         self.aerospaceCommand = config.aerospacePath
     }
 
@@ -26,6 +28,41 @@ class AerospaceClient {
     /// Switch to a specific workspace
     func switchToWorkspace(_ workspace: String) {
         _ = runCommand(arguments: ["workspace", workspace])
+    }
+
+    /// Get current mode from aerospace
+    /// Returns nil if mode-command is not configured
+    /// Returns current mode string if successful (Aerospace always has an active mode)
+    func getCurrentMode() -> String? {
+        // If mode command not configured, return nil immediately
+        guard let modeCommand = config.modeCommand else {
+            DebugLogger.log("Mode command not configured, skipping mode query")
+            return nil
+        }
+
+        DebugLogger.log("Querying current mode with command: \(modeCommand)")
+
+        // Split command into arguments (e.g., "list-modes --current" -> ["list-modes", "--current"])
+        let arguments = modeCommand.split(separator: " ").map { String($0) }
+
+        guard !arguments.isEmpty else {
+            DebugLogger.log("Mode command is empty after parsing")
+            return nil
+        }
+
+        let output = runCommand(arguments: arguments)
+        let mode = output.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if mode.isEmpty {
+            let errorMsg = "WARNING: Mode query returned empty result. Command: \(aerospaceCommand) \(arguments.joined(separator: " "))"
+            DebugLogger.log(errorMsg)
+            fputs(errorMsg + "\n", stderr)
+            // Return "Error" to indicate failure
+            return "Error"
+        }
+
+        DebugLogger.log("Current mode: \(mode)")
+        return mode
     }
 
     /// Get apps grouped by workspace with fullscreen status

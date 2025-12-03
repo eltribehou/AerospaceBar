@@ -18,12 +18,19 @@ bar-position = "top"
 # Default: 25 for horizontal (top/bottom), 30 for vertical (left/right)
 bar-size = 25
 
-# Polling interval for workspace/window updates (in milliseconds)
+# Debounce interval for refresh requests (in milliseconds)
+# Batches rapid Aerospace callbacks to prevent CPU/IO spikes
 # Lower values = more responsive, higher CPU usage
 # Higher values = better battery life, less responsive
-# Minimum: 100ms
-# Default: 300ms
-aerospace-poll-interval = 300
+# Minimum: 50ms
+# Default: 150ms
+refresh-debounce-interval = 150
+
+# Command to get current Aerospace keybind mode (optional)
+# Full command with parameters (e.g., "list-modes --current")
+# If not set, mode component is disabled
+# Default: none (disabled)
+# mode-command = "list-modes --current"
 
 # Color customization
 # All colors support hex formats: #RGB, #RRGGBB, or #RRGGBBAA (with alpha)

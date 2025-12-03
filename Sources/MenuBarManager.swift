@@ -6,25 +6,34 @@ class MenuBarManager: ObservableObject {
     private let aerospaceClient: AerospaceClient
     private let config: Config
 
-    // Debounce timer to prevent excessive refresh calls during rapid events
+    // Debounce timers to prevent excessive refresh calls during rapid events
     // Uses trailing-edge debouncing: waits for activity to stop before refreshing
     private var debounceTimer: Timer?
+    private var modeDebounceTimer: Timer?
 
     @Published var workspaces: [String] = []
     @Published var currentWorkspace: String?
     @Published var appsPerWorkspace: [String: [AppInfo]] = [:]
     @Published var currentTime = Date()
+    @Published var currentMode: String?  // Current Aerospace keybind mode (nil if mode-command not configured)
 
     init() {
         let config = Config.load()
         self.config = config
         self.aerospaceClient = AerospaceClient(config: config)
 
-        // Set up distributed notification listener for external refresh requests
+        // Set up distributed notification listeners for external refresh requests
         DistributedNotificationCenter.default().addObserver(
             self,
             selector: #selector(handleRefreshWindowsNotification),
             name: NSNotification.Name("com.aerospacebar.refreshWindows"),
+            object: nil
+        )
+
+        DistributedNotificationCenter.default().addObserver(
+            self,
+            selector: #selector(handleRefreshModeNotification),
+            name: NSNotification.Name("com.aerospacebar.refreshMode"),
             object: nil
         )
     }
@@ -58,10 +67,36 @@ class MenuBarManager: ObservableObject {
         }
     }
 
+    @objc private func handleRefreshModeNotification() {
+        // Implement trailing-edge debouncing for mode refresh
+        // This prevents excessive CLI calls during rapid mode changes
+
+        DebugLogger.log("Received refresh-mode notification")
+
+        // Cancel any pending mode refresh timer
+        if modeDebounceTimer != nil {
+            DebugLogger.log("Cancelling pending mode debounce timer")
+            modeDebounceTimer?.invalidate()
+        }
+
+        // Create new timer that will fire after the debounce interval
+        // Convert milliseconds to seconds for Timer
+        let debounceSeconds = TimeInterval(config.debounceInterval) / 1000.0
+
+        DebugLogger.log("Starting mode debounce timer (\(config.debounceInterval)ms)")
+
+        modeDebounceTimer = Timer.scheduledTimer(withTimeInterval: debounceSeconds, repeats: false) { [weak self] _ in
+            // Timer fired - no more events for debounce duration, safe to refresh
+            DebugLogger.log("Mode debounce timer fired - executing mode refresh")
+            self?.refreshMode()
+        }
+    }
+
     func setup() {
-        // Get initial workspaces (no debouncing on startup - need immediate state)
-        DebugLogger.log("App startup - performing initial workspace refresh")
+        // Get initial workspaces and mode (no debouncing on startup - need immediate state)
+        DebugLogger.log("App startup - performing initial workspace and mode refresh")
         refreshWorkspaces()
+        refreshMode()
 
         // Create the menubar window with the manager as observed object
         let contentView = MenuBarView(
@@ -162,6 +197,14 @@ class MenuBarManager: ObservableObject {
         workspaces = Array(apps.keys).sorted()
 
         DebugLogger.log("Refresh complete - current workspace: \(currentWorkspace ?? "none"), \(workspaces.count) workspaces total")
+    }
+
+    private func refreshMode() {
+        DebugLogger.log("Refreshing mode - querying Aerospace CLI")
+
+        currentMode = aerospaceClient.getCurrentMode()
+
+        DebugLogger.log("Mode refresh complete - current mode: \(currentMode ?? "none")")
     }
 
     private func switchToWorkspace(_ workspace: String) {

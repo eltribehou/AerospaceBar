@@ -47,7 +47,8 @@ struct MenuBarView: View {
 
             Spacer()
 
-            // Clock on the right
+            // Mode (if active) + Clock on the right
+            ModeView(isVertical: false, currentMode: manager.currentMode, colors: colors)
             ClockView(isVertical: false, currentTime: manager.currentTime, colors: colors)
                 .padding(.trailing, 8)
         }
@@ -74,7 +75,8 @@ struct MenuBarView: View {
 
             Spacer()
 
-            // Clock on the bottom
+            // Mode (if active) + Clock on the bottom
+            ModeView(isVertical: true, currentMode: manager.currentMode, colors: colors)
             ClockView(isVertical: true, currentTime: manager.currentTime, colors: colors)
                 .padding(.bottom, 8)
         }
@@ -218,5 +220,21 @@ struct ClockView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: currentTime)
+    }
+}
+
+struct ModeView: View {
+    let isVertical: Bool
+    let currentMode: String?
+    let colors: ColorConfig
+
+    var body: some View {
+        // Only render if mode-command is configured (currentMode is non-nil)
+        if let mode = currentMode {
+            Text(mode)
+                .font(.system(size: isVertical ? 8 : 11, weight: .medium))
+                .foregroundColor(colors.textInactive)
+                .padding(isVertical ? .bottom : .trailing, 4)  // Small spacing before clock
+        }
     }
 }

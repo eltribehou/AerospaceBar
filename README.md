@@ -13,13 +13,13 @@ Unlike macOS menubar I can put it on the side, and it doesn't grab my attention 
 - Display Aerospace workspaces
 - Display the running applications in each workspace with their icon
 - Display a green badge on fullscreen apps
+- Display current Aerospace keybind mode (optional, configurable)
 - A clock on the right or bottom depending on orientation.
-- Configurable colors 
-- Compatible with Hyprspace 
+- Configurable colors
+- Compatible with Hyprspace
 
 ## Features that might be added
 
-- Display current keybind mode
 - Maybe, allow to place each element in a different location, specify padding, things like that
 - No proper external component system, I want to keep it simple and minimal, and lazy
  
@@ -60,6 +60,12 @@ bar-size = 25
 # Minimum: 50
 refresh-debounce-interval = 150
 
+# Command to get current Aerospace keybind mode (optional)
+# Full command with parameters (e.g., "list-modes --current")
+# If not set, mode component is disabled
+# Default: none (disabled)
+mode-command = "list-modes --current"
+
 # Color customization (all colors support #RGB, #RRGGBB, #RRGGBBAA formats)
 [colors]
 background = "#1A1A1AF2"                    # Bar background
@@ -87,6 +93,10 @@ exec-and-forget = ["aerospacebar", "--refresh-windows"]
 
 [[on-workspace-change]]
 exec-and-forget = ["aerospacebar", "--refresh-windows"]
+
+# Refresh mode display when keybind mode changes (optional, only needed if using mode-command)
+[[on-mode-changed]]
+exec-and-forget = ["aerospacebar", "--refresh-mode"]
 ```
 
 This assumes you've installed AerospaceBar to `/usr/local/bin/aerospacebar` using `make install`. If you're running the binary from a different location, use the full path instead.
@@ -126,10 +136,10 @@ make debug
 ```
 
 Debug logs show:
-- When refresh requests are received from Aerospace callbacks
-- Debounce timer activity (started, cancelled, fired)
-- When actual workspace refreshes occur
-- Current workspace and workspace count after each refresh
+- When refresh requests are received from Aerospace callbacks (windows and mode)
+- Debounce timer activity (started, cancelled, fired) for both windows and mode
+- When actual workspace and mode refreshes occur
+- Current workspace, workspace count, and mode after each refresh
 - User-initiated workspace switches
 
 This is useful for understanding the debouncing behavior and troubleshooting refresh issues.
@@ -144,6 +154,7 @@ The app uses an event-driven architecture - Aerospace callbacks trigger refreshe
 - Always shows the current workspace (even if empty)
 - Shows up to 3 app icons per workspace (with a "+N" counter for more)
 - Green badge on fullscreen apps
+- Displays current Aerospace keybind mode (if configured) before the clock
 - Click a workspace to switch to it
 - Right-click anywhere for the quit menu
 

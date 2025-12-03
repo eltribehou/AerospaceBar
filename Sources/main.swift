@@ -14,6 +14,16 @@ if arguments.contains("--refresh-windows") {
     exit(0)
 }
 
+// Check if we're being called to trigger a mode refresh
+if arguments.contains("--refresh-mode") {
+    // Post distributed notification to running AerospaceBar instance
+    DistributedNotificationCenter.default().post(
+        name: NSNotification.Name("com.aerospacebar.refreshMode"),
+        object: nil
+    )
+    exit(0)
+}
+
 // Enable debug logging if --debug flag is present
 if arguments.contains("--debug") {
     DebugLogger.isEnabled = true
