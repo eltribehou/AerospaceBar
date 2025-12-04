@@ -121,6 +121,9 @@ class MenuBarManager: ObservableObject {
         refreshMode()
         refreshAudio()
 
+        // Start listening for audio device and volume changes
+        audioClient.startListening()
+
         // Create the menubar window with the manager as observed object
         let contentView = MenuBarView(
             manager: self,
@@ -199,6 +202,7 @@ class MenuBarManager: ObservableObject {
     }
 
     func teardown() {
+        audioClient.stopListening()
         window?.close()
         window = nil
     }
