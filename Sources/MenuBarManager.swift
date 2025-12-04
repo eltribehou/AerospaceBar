@@ -217,8 +217,8 @@ class MenuBarManager: ObservableObject {
         // Assign the complete dictionary in one go
         appsPerWorkspace = apps
 
-        // Build workspace list
-        workspaces = Array(apps.keys).sorted()
+        // Build workspace list with natural sorting (e.g., f5, f9, f10, f11 instead of f10, f11, f5, f9)
+        workspaces = Array(apps.keys).sorted { $0.localizedStandardCompare($1) == .orderedAscending }
 
         DebugLogger.log("Refresh complete - current workspace: \(currentWorkspace ?? "none"), \(workspaces.count) workspaces total")
     }
