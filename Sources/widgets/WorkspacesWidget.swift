@@ -11,6 +11,7 @@ struct WorkspacesWidgetView: View {
     let showCount: Bool
     let spacing: CGFloat
     let iconSize: CGFloat
+    let borderMargin: CGFloat
 
     init(manager: MenuBarManager, isVertical: Bool, colors: ColorConfig, config: TOMLTable?) {
         self.manager = manager
@@ -22,20 +23,26 @@ struct WorkspacesWidgetView: View {
         self.showCount = config?["show-app-count"]?.bool ?? true
         self.spacing = CGFloat(config?["workspace-spacing"]?.int ?? 4)
         self.iconSize = CGFloat(config?["icon-size"]?.int ?? 14)
+        self.borderMargin = CGFloat(config?["border-margin"]?.int ?? 8)
     }
 
     var body: some View {
-        if isVertical {
-            VStack(spacing: spacing) {
-                workspaceButtons
+        Group {
+            if isVertical {
+                VStack(spacing: spacing) {
+                    workspaceButtons
+                }
+                .padding(.top, 8)
+                .padding(.horizontal, borderMargin)
+            } else {
+                HStack(spacing: spacing) {
+                    workspaceButtons
+                }
+                .padding(.leading, 8)
+                .padding(.vertical, borderMargin)
             }
-            .padding(.top, 8)
-        } else {
-            HStack(spacing: spacing) {
-                workspaceButtons
-            }
-            .padding(.leading, 8)
         }
+        .frame(maxWidth: isVertical ? .infinity : nil, maxHeight: isVertical ? nil : .infinity)
     }
 
     @ViewBuilder
@@ -102,6 +109,7 @@ struct WorkspaceButton: View {
                             }
                         }
                     }
+                    .frame(maxWidth: .infinity)
                     .padding(.horizontal, 2)
                     .padding(.vertical, 8)
                 } else {
@@ -131,6 +139,7 @@ struct WorkspaceButton: View {
                             }
                         }
                     }
+                    .frame(maxHeight: .infinity)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)
                 }
