@@ -1,94 +1,45 @@
 import SwiftUI
 import AppKit
+import TOMLKit
 
 /// Workspaces widget displaying workspace buttons with app icons
-struct WorkspacesWidget: ParameterizedWidget {
-    static let identifier = "workspaces"
-    static let displayName = "Workspaces"
+struct WorkspacesWidgetView: View {
+    @ObservedObject var manager: MenuBarManager
+    let isVertical: Bool
+    let colors: ColorConfig
+    let maxIcons: Int
+    let showCount: Bool
+    let spacing: CGFloat
+    let iconSize: CGFloat
 
-    static let parameterDefinitions: [WidgetParameterDefinition] = [
-        WidgetParameterDefinition(
-            key: "max-app-icons",
-            type: .int,
-            defaultValue: 3,
-            description: "Maximum number of app icons to display per workspace"
-        ),
-        WidgetParameterDefinition(
-            key: "show-app-count",
-            type: .bool,
-            defaultValue: true,
-            description: "Show count when more apps than max-app-icons"
-        ),
-        WidgetParameterDefinition(
-            key: "workspace-spacing",
-            type: .int,
-            defaultValue: 4,
-            description: "Spacing between workspace buttons"
-        ),
-        WidgetParameterDefinition(
-            key: "icon-size",
-            type: .int,
-            defaultValue: 14,
-            description: "Size of app icons in pixels"
-        )
-    ]
+    init(manager: MenuBarManager, isVertical: Bool, colors: ColorConfig, config: TOMLTable?) {
+        self.manager = manager
+        self.isVertical = isVertical
+        self.colors = colors
 
-    static var defaultParameters: WidgetParameters {
-        WidgetParameterParser.parse(table: nil, definitions: parameterDefinitions)
+        // Parse parameters with defaults
+        self.maxIcons = config?["max-app-icons"]?.int ?? 3
+        self.showCount = config?["show-app-count"]?.bool ?? true
+        self.spacing = CGFloat(config?["workspace-spacing"]?.int ?? 4)
+        self.iconSize = CGFloat(config?["icon-size"]?.int ?? 14)
     }
 
-    private let parameters: WidgetParameters
-
-    init(parameters: WidgetParameters) {
-        self.parameters = parameters
-    }
-
-    func render(manager: MenuBarManager, isVertical: Bool, colors: ColorConfig) -> AnyView {
-        let maxIcons = parameters.getInt("max-app-icons", default: 3)
-        let showCount = parameters.getBool("show-app-count", default: true)
-        let spacing = CGFloat(parameters.getInt("workspace-spacing", default: 4))
-        let iconSize = CGFloat(parameters.getInt("icon-size", default: 14))
-
-        let content = Group {
-            if isVertical {
-                VStack(spacing: spacing) {
-                    workspaceButtons(
-                        manager: manager,
-                        isVertical: true,
-                        colors: colors,
-                        maxIcons: maxIcons,
-                        showCount: showCount,
-                        iconSize: iconSize
-                    )
-                }
-                .padding(.top, 8)
-            } else {
-                HStack(spacing: spacing) {
-                    workspaceButtons(
-                        manager: manager,
-                        isVertical: false,
-                        colors: colors,
-                        maxIcons: maxIcons,
-                        showCount: showCount,
-                        iconSize: iconSize
-                    )
-                }
-                .padding(.leading, 8)
+    var body: some View {
+        if isVertical {
+            VStack(spacing: spacing) {
+                workspaceButtons
             }
+            .padding(.top, 8)
+        } else {
+            HStack(spacing: spacing) {
+                workspaceButtons
+            }
+            .padding(.leading, 8)
         }
-
-        return AnyView(content)
     }
 
     @ViewBuilder
-    private func workspaceButtons(
-        manager: MenuBarManager,
-        isVertical: Bool,
-        colors: ColorConfig,
-        maxIcons: Int,
-        showCount: Bool,
-        iconSize: CGFloat
-    ) -> some View {
+    private var workspaceButtons: some View {
         ForEach(manager.workspaces, id: \.self) { workspace in
             WorkspaceButton(
                 workspace: workspace,

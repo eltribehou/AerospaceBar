@@ -1,49 +1,30 @@
 import SwiftUI
+import TOMLKit
 
 /// Mode indicator widget showing current Aerospace keybind mode
-struct ModeWidget: ParameterizedWidget {
-    static let identifier = "mode"
-    static let displayName = "Mode Indicator"
+struct ModeWidgetView: View {
+    @ObservedObject var manager: MenuBarManager
+    let isVertical: Bool
+    let colors: ColorConfig
+    let fontSize: CGFloat
 
-    static let parameterDefinitions: [WidgetParameterDefinition] = [
-        WidgetParameterDefinition(
-            key: "font-size-horizontal",
-            type: .int,
-            defaultValue: 11,
-            description: "Font size when bar is horizontal"
-        ),
-        WidgetParameterDefinition(
-            key: "font-size-vertical",
-            type: .int,
-            defaultValue: 8,
-            description: "Font size when bar is vertical"
-        )
-    ]
-
-    static var defaultParameters: WidgetParameters {
-        WidgetParameterParser.parse(table: nil, definitions: parameterDefinitions)
+    init(manager: MenuBarManager, isVertical: Bool, colors: ColorConfig, config: TOMLTable?) {
+        self.manager = manager
+        self.isVertical = isVertical
+        self.colors = colors
+        let sizeKey = isVertical ? "font-size-vertical" : "font-size-horizontal"
+        let defaultSize = isVertical ? 8 : 11
+        self.fontSize = CGFloat(config?[sizeKey]?.int ?? defaultSize)
     }
 
-    private let parameters: WidgetParameters
-
-    init(parameters: WidgetParameters) {
-        self.parameters = parameters
-    }
-
-    func render(manager: MenuBarManager, isVertical: Bool, colors: ColorConfig) -> AnyView {
-        let fontSize = isVertical
-            ? parameters.getInt("font-size-vertical", default: 8)
-            : parameters.getInt("font-size-horizontal", default: 11)
-
-        let content = Group {
+    var body: some View {
+        Group {
             if let mode = manager.currentMode {
                 Text(mode)
-                    .font(.system(size: CGFloat(fontSize), weight: .medium))
+                    .font(.system(size: fontSize, weight: .medium))
                     .foregroundColor(colors.textInactive)
                     .padding(isVertical ? .bottom : .trailing, 4)
             }
         }
-
-        return AnyView(content)
     }
 }

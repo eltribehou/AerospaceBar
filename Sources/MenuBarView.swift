@@ -6,7 +6,7 @@ struct MenuBarView: View {
     let barPosition: BarPosition
     let barOpacity: Double
     let colors: ColorConfig
-    let widgets: [MenuBarWidget]
+    let widgetConfig: WidgetConfig
     let onQuit: () -> Void
 
     var body: some View {
@@ -39,19 +39,41 @@ struct MenuBarView: View {
         return Color(red: Double(red), green: Double(green), blue: Double(blue), opacity: barOpacity)
     }
 
+    @ViewBuilder
     private var horizontalLayout: some View {
         HStack(spacing: 0) {
-            ForEach(Array(widgets.enumerated()), id: \.offset) { index, widget in
-                widget.render(manager: manager, isVertical: false, colors: colors)
+            ForEach(widgetConfig.order, id: \.self) { widgetID in
+                widgetView(for: widgetID, isVertical: false)
             }
         }
     }
 
+    @ViewBuilder
     private var verticalLayout: some View {
         VStack(spacing: 0) {
-            ForEach(Array(widgets.enumerated()), id: \.offset) { index, widget in
-                widget.render(manager: manager, isVertical: true, colors: colors)
+            ForEach(widgetConfig.order, id: \.self) { widgetID in
+                widgetView(for: widgetID, isVertical: true)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func widgetView(for id: String, isVertical: Bool) -> some View {
+        let config = widgetConfig.parameters[id]
+
+        switch id {
+        case "workspaces":
+            WorkspacesWidgetView(manager: manager, isVertical: isVertical, colors: colors, config: config)
+        case "spacer":
+            SpacerWidgetView()
+        case "mode":
+            ModeWidgetView(manager: manager, isVertical: isVertical, colors: colors, config: config)
+        case "audio":
+            AudioWidgetView(manager: manager, isVertical: isVertical, colors: colors, config: config)
+        case "clock":
+            ClockWidgetView(manager: manager, isVertical: isVertical, colors: colors, config: config)
+        default:
+            EmptyView()
         }
     }
 }

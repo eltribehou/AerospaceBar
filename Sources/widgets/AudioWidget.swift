@@ -1,55 +1,29 @@
 import SwiftUI
 import AppKit
+import TOMLKit
 
 /// Audio output widget showing device icon and volume bar
-struct AudioWidget: ParameterizedWidget {
-    static let identifier = "audio"
-    static let displayName = "Audio Output"
+struct AudioWidgetView: View {
+    @ObservedObject var manager: MenuBarManager
+    let isVertical: Bool
+    let colors: ColorConfig
+    let showIcon: Bool
+    let showVolumeBar: Bool
+    let barWidth: CGFloat
+    let barHeight: CGFloat
 
-    static let parameterDefinitions: [WidgetParameterDefinition] = [
-        WidgetParameterDefinition(
-            key: "show-icon",
-            type: .bool,
-            defaultValue: true,
-            description: "Show audio device icon"
-        ),
-        WidgetParameterDefinition(
-            key: "show-volume-bar",
-            type: .bool,
-            defaultValue: true,
-            description: "Show volume level bar"
-        ),
-        WidgetParameterDefinition(
-            key: "volume-bar-width",
-            type: .int,
-            defaultValue: 3,
-            description: "Width of volume bar in pixels"
-        ),
-        WidgetParameterDefinition(
-            key: "volume-bar-height",
-            type: .int,
-            defaultValue: 16,
-            description: "Height of volume bar in pixels"
-        )
-    ]
-
-    static var defaultParameters: WidgetParameters {
-        WidgetParameterParser.parse(table: nil, definitions: parameterDefinitions)
+    init(manager: MenuBarManager, isVertical: Bool, colors: ColorConfig, config: TOMLTable?) {
+        self.manager = manager
+        self.isVertical = isVertical
+        self.colors = colors
+        self.showIcon = config?["show-icon"]?.bool ?? true
+        self.showVolumeBar = config?["show-volume-bar"]?.bool ?? true
+        self.barWidth = CGFloat(config?["volume-bar-width"]?.int ?? 3)
+        self.barHeight = CGFloat(config?["volume-bar-height"]?.int ?? 16)
     }
 
-    private let parameters: WidgetParameters
-
-    init(parameters: WidgetParameters) {
-        self.parameters = parameters
-    }
-
-    func render(manager: MenuBarManager, isVertical: Bool, colors: ColorConfig) -> AnyView {
-        let showIcon = parameters.getBool("show-icon", default: true)
-        let showVolumeBar = parameters.getBool("show-volume-bar", default: true)
-        let barWidth = CGFloat(parameters.getInt("volume-bar-width", default: 3))
-        let barHeight = CGFloat(parameters.getInt("volume-bar-height", default: 16))
-
-        let content = Group {
+    var body: some View {
+        Group {
             if let device = manager.currentAudioDevice {
                 HStack(spacing: 4) {
                     // Audio device icon
@@ -91,7 +65,5 @@ struct AudioWidget: ParameterizedWidget {
                 .padding(isVertical ? .bottom : .trailing, 4)
             }
         }
-
-        return AnyView(content)
     }
 }
