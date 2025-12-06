@@ -233,18 +233,18 @@ struct Config {
             colors = .default
         }
 
-        // Read [[widgets]] array of tables if present
+        // Read [[widget]] array of tables if present
         let widgets: WidgetConfig
-        if let widgetsArray = table["widgets"]?.array {
+        if let widgetsArray = table["widget"]?.array {
             var widgetsList: [(type: String, params: TOMLTable)] = []
 
             for widgetValue in widgetsArray {
                 if let widgetTable = widgetValue.table {
-                    // Extract widget type (required field)
-                    if let widgetType = widgetTable["type"]?.string {
+                    // Extract widget name (required field)
+                    if let widgetType = widgetTable["name"]?.string {
                         widgetsList.append((type: widgetType, params: widgetTable))
                     } else {
-                        print("Warning: Widget entry missing 'type' field, skipping")
+                        print("Warning: Widget entry missing 'name' field, skipping")
                     }
                 }
             }
@@ -256,7 +256,7 @@ struct Config {
                 widgets = WidgetConfig(widgets: widgetsList)
             }
         } else {
-            // No [[widgets]] section, use defaults
+            // No [[widget]] section, use defaults
             widgets = .default
         }
 

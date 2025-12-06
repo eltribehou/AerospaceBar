@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import TOMLKit
 
 struct MenuBarView: View {
     @ObservedObject var manager: MenuBarManager
@@ -42,8 +43,8 @@ struct MenuBarView: View {
     @ViewBuilder
     private var horizontalLayout: some View {
         HStack(spacing: 0) {
-            ForEach(widgetConfig.order, id: \.self) { widgetID in
-                widgetView(for: widgetID, isVertical: false)
+            ForEach(Array(widgetConfig.widgets.enumerated()), id: \.offset) { index, widget in
+                widgetView(for: widget.type, config: widget.params, isVertical: false)
             }
         }
     }
@@ -51,21 +52,19 @@ struct MenuBarView: View {
     @ViewBuilder
     private var verticalLayout: some View {
         VStack(spacing: 0) {
-            ForEach(widgetConfig.order, id: \.self) { widgetID in
-                widgetView(for: widgetID, isVertical: true)
+            ForEach(Array(widgetConfig.widgets.enumerated()), id: \.offset) { index, widget in
+                widgetView(for: widget.type, config: widget.params, isVertical: true)
             }
         }
     }
 
     @ViewBuilder
-    private func widgetView(for id: String, isVertical: Bool) -> some View {
-        let config = widgetConfig.parameters[id]
-
+    private func widgetView(for id: String, config: TOMLTable, isVertical: Bool) -> some View {
         switch id {
         case "workspaces":
             WorkspacesWidgetView(manager: manager, isVertical: isVertical, colors: colors, config: config)
         case "spacer":
-            SpacerWidgetView()
+            SpacerWidgetView(isVertical: isVertical, config: config)
         case "mode":
             ModeWidgetView(manager: manager, isVertical: isVertical, colors: colors, config: config)
         case "audio":
