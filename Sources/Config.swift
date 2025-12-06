@@ -70,13 +70,29 @@ struct ColorConfig {
 }
 
 struct WidgetConfig {
-    let order: [String]
-    let parameters: [String: TOMLTable]
+    let widgets: [(type: String, params: TOMLTable)]
 
-    static let `default` = WidgetConfig(
-        order: ["workspaces", "spacer", "mode", "audio", "clock"],
-        parameters: [:]
-    )
+    // Computed property for backwards compatibility with existing code
+    var order: [String] {
+        widgets.map { $0.type }
+    }
+
+    // Computed property for backwards compatibility with existing code
+    var parameters: [String: TOMLTable] {
+        var dict: [String: TOMLTable] = [:]
+        for widget in widgets {
+            dict[widget.type] = widget.params
+        }
+        return dict
+    }
+
+    static let `default` = WidgetConfig(widgets: [
+        (type: "workspaces", params: TOMLTable()),
+        (type: "spacer", params: TOMLTable()),
+        (type: "mode", params: TOMLTable()),
+        (type: "audio", params: TOMLTable()),
+        (type: "clock", params: TOMLTable())
+    ])
 }
 
 struct Config {
@@ -217,27 +233,30 @@ struct Config {
             colors = .default
         }
 
-        // Read [widgets] section if present
+        // Read [[widgets]] array of tables if present
         let widgets: WidgetConfig
-        if let widgetsTable = table["widgets"]?.table {
-            // Parse widget order array
-            let order: [String]
-            if let orderArray = widgetsTable["order"]?.array {
-                order = orderArray.compactMap { $0.string }
-            } else {
-                order = WidgetConfig.default.order
-            }
+        if let widgetsArray = table["widgets"]?.array {
+            var widgetsList: [(type: String, params: TOMLTable)] = []
 
-            // Extract parameter tables for each widget
-            var parameters: [String: TOMLTable] = [:]
-            for widgetID in order {
-                if let widgetTable = widgetsTable[widgetID]?.table {
-                    parameters[widgetID] = widgetTable
+            for widgetValue in widgetsArray {
+                if let widgetTable = widgetValue.table {
+                    // Extract widget type (required field)
+                    if let widgetType = widgetTable["type"]?.string {
+                        widgetsList.append((type: widgetType, params: widgetTable))
+                    } else {
+                        print("Warning: Widget entry missing 'type' field, skipping")
+                    }
                 }
             }
 
-            widgets = WidgetConfig(order: order, parameters: parameters)
+            if widgetsList.isEmpty {
+                print("Warning: No valid widgets found, using defaults")
+                widgets = .default
+            } else {
+                widgets = WidgetConfig(widgets: widgetsList)
+            }
         } else {
+            // No [[widgets]] section, use defaults
             widgets = .default
         }
 
