@@ -263,6 +263,7 @@ struct AudioOutputView: View {
         // Only render if audio device info is available
         if let device = audioDevice {
             HStack(spacing: 4) {
+                // Audio device icon
                 if let icon = device.icon {
                     Image(nsImage: icon)
                         .resizable()
@@ -275,36 +276,27 @@ struct AudioOutputView: View {
                         .foregroundColor(colors.textInactive)
                         .lineLimit(1)
                 }
-                // Volume bar is always vertical, displayed to the right of the icon
-                VolumeIndicatorView(volume: device.volume, colors: colors)
+
+                // Vertical volume bar (always vertical regardless of bar position)
+                VStack(spacing: 0) {
+                    GeometryReader { geometry in
+                        let totalHeight = geometry.size.height
+                        let filledHeight = totalHeight * CGFloat(device.volume)
+
+                        VStack(spacing: 0) {
+                            Spacer()
+                                .frame(height: totalHeight - filledHeight)
+                            Rectangle()
+                                .fill(colors.textActive)
+                                .frame(height: filledHeight)
+                        }
+                    }
+                }
+                .frame(width: 3, height: 16)
+                .background(colors.textInactive.opacity(0.3))
+                .cornerRadius(1.5)
             }
             .padding(isVertical ? .bottom : .trailing, 4)  // Small spacing before clock
         }
-    }
-}
-
-struct VolumeIndicatorView: View {
-    let volume: Float  // 0.0 to 1.0
-    let colors: ColorConfig
-
-    var body: some View {
-        // Vertical volume bar
-        VStack(spacing: 0) {
-            GeometryReader { geometry in
-                let totalHeight = geometry.size.height
-                let filledHeight = totalHeight * CGFloat(volume)
-
-                VStack(spacing: 0) {
-                    Spacer()
-                        .frame(height: totalHeight - filledHeight)
-                    Rectangle()
-                        .fill(colors.textActive)
-                        .frame(height: filledHeight)
-                }
-            }
-        }
-        .frame(width: 3, height: 16)
-        .background(colors.textInactive.opacity(0.3))
-        .cornerRadius(1.5)
     }
 }
