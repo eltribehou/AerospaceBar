@@ -69,6 +69,16 @@ struct ColorConfig {
     }
 }
 
+struct WidgetConfig {
+    let order: [String]
+    let parameters: [String: TOMLTable]
+
+    static let `default` = WidgetConfig(
+        order: ["workspaces", "spacer", "mode", "audio", "clock"],
+        parameters: [:]
+    )
+}
+
 struct Config {
     let aerospacePath: String
     let barPosition: BarPosition
@@ -77,6 +87,7 @@ struct Config {
     let debounceInterval: Int  // in milliseconds
     let modeCommand: String?  // Optional command to get current mode (e.g., "list-modes --current")
     let colors: ColorConfig
+    let widgets: WidgetConfig
 
     static let `default` = Config(
         aerospacePath: "/usr/local/bin/hyprspace",
@@ -85,7 +96,8 @@ struct Config {
         barOpacity: 1.0,  // Fully opaque by default
         debounceInterval: 150,  // 150ms default - balances responsiveness and efficiency
         modeCommand: nil,  // Disabled by default
-        colors: .default
+        colors: .default,
+        widgets: .default
     )
 
     static func defaultBarSize(for position: BarPosition) -> CGFloat {
@@ -205,6 +217,30 @@ struct Config {
             colors = .default
         }
 
-        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, barOpacity: barOpacity, debounceInterval: debounceInterval, modeCommand: modeCommand, colors: colors)
+        // Read [widgets] section if present
+        let widgets: WidgetConfig
+        if let widgetsTable = table["widgets"]?.table {
+            // Parse widget order array
+            let order: [String]
+            if let orderArray = widgetsTable["order"]?.array {
+                order = orderArray.compactMap { $0.string }
+            } else {
+                order = WidgetConfig.default.order
+            }
+
+            // Extract parameter tables for each widget
+            var parameters: [String: TOMLTable] = [:]
+            for widgetID in order {
+                if let widgetTable = widgetsTable[widgetID]?.table {
+                    parameters[widgetID] = widgetTable
+                }
+            }
+
+            widgets = WidgetConfig(order: order, parameters: parameters)
+        } else {
+            widgets = .default
+        }
+
+        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, barOpacity: barOpacity, debounceInterval: debounceInterval, modeCommand: modeCommand, colors: colors, widgets: widgets)
     }
 }

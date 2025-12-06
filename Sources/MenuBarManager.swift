@@ -124,15 +124,16 @@ class MenuBarManager: ObservableObject {
         // Start listening for audio device and volume changes
         audioClient.startListening()
 
+        // Create widget instances from config
+        let widgetInstances = WidgetRegistry.shared.createWidgets(from: config.widgets)
+
         // Create the menubar window with the manager as observed object
         let contentView = MenuBarView(
             manager: self,
             barPosition: config.barPosition,
             barOpacity: config.barOpacity,
             colors: config.colors,
-            onWorkspaceClick: { [weak self] workspace in
-                self?.switchToWorkspace(workspace)
-            },
+            widgets: widgetInstances,
             onQuit: {
                 NSApplication.shared.terminate(nil)
             }
@@ -247,7 +248,7 @@ class MenuBarManager: ObservableObject {
         }
     }
 
-    private func switchToWorkspace(_ workspace: String) {
+    func switchToWorkspace(_ workspace: String) {
         DebugLogger.log("User clicked workspace '\(workspace)' - switching and refreshing")
 
         aerospaceClient.switchToWorkspace(workspace)
