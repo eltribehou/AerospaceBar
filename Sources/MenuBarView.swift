@@ -262,34 +262,21 @@ struct AudioOutputView: View {
     var body: some View {
         // Only render if audio device info is available
         if let device = audioDevice {
-            Group {
-                if isVertical {
-                    VStack(spacing: 2) {
-                        if let icon = device.icon {
-                            Image(nsImage: icon)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 14, height: 14)
-                        }
-                        VolumeIndicatorView(isVertical: true, volume: device.volume, colors: colors)
-                    }
+            HStack(spacing: 4) {
+                if let icon = device.icon {
+                    Image(nsImage: icon)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 16, height: 16)
                 } else {
-                    HStack(spacing: 4) {
-                        if let icon = device.icon {
-                            Image(nsImage: icon)
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(width: 16, height: 16)
-                        } else {
-                            // Fall back to device name text
-                            Text(device.name)
-                                .font(.system(size: 11, weight: .regular))
-                                .foregroundColor(colors.textInactive)
-                                .lineLimit(1)
-                        }
-                        VolumeIndicatorView(isVertical: false, volume: device.volume, colors: colors)
-                    }
+                    // Fall back to device name text
+                    Text(device.name)
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundColor(colors.textInactive)
+                        .lineLimit(1)
                 }
+                // Volume bar is always vertical, displayed to the right of the icon
+                VolumeIndicatorView(volume: device.volume, colors: colors)
             }
             .padding(isVertical ? .bottom : .trailing, 4)  // Small spacing before clock
         }
@@ -297,49 +284,27 @@ struct AudioOutputView: View {
 }
 
 struct VolumeIndicatorView: View {
-    let isVertical: Bool
     let volume: Float  // 0.0 to 1.0
     let colors: ColorConfig
 
     var body: some View {
-        if isVertical {
-            // Vertical bar for vertical layout
-            VStack(spacing: 0) {
-                GeometryReader { geometry in
-                    let totalHeight = geometry.size.height
-                    let filledHeight = totalHeight * CGFloat(volume)
+        // Vertical volume bar
+        VStack(spacing: 0) {
+            GeometryReader { geometry in
+                let totalHeight = geometry.size.height
+                let filledHeight = totalHeight * CGFloat(volume)
 
-                    VStack(spacing: 0) {
-                        Spacer()
-                            .frame(height: totalHeight - filledHeight)
-                        Rectangle()
-                            .fill(colors.textActive)
-                            .frame(height: filledHeight)
-                    }
+                VStack(spacing: 0) {
+                    Spacer()
+                        .frame(height: totalHeight - filledHeight)
+                    Rectangle()
+                        .fill(colors.textActive)
+                        .frame(height: filledHeight)
                 }
             }
-            .frame(width: 3, height: 20)
-            .background(colors.textInactive.opacity(0.3))
-            .cornerRadius(1.5)
-        } else {
-            // Horizontal bar for horizontal layout
-            HStack(spacing: 0) {
-                GeometryReader { geometry in
-                    let totalWidth = geometry.size.width
-                    let filledWidth = totalWidth * CGFloat(volume)
-
-                    HStack(spacing: 0) {
-                        Rectangle()
-                            .fill(colors.textActive)
-                            .frame(width: filledWidth)
-                        Spacer()
-                            .frame(width: totalWidth - filledWidth)
-                    }
-                }
-            }
-            .frame(width: 30, height: 3)
-            .background(colors.textInactive.opacity(0.3))
-            .cornerRadius(1.5)
         }
+        .frame(width: 3, height: 16)
+        .background(colors.textInactive.opacity(0.3))
+        .cornerRadius(1.5)
     }
 }
