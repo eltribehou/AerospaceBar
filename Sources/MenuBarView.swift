@@ -5,6 +5,7 @@ import TOMLKit
 struct MenuBarView: View {
     @ObservedObject var manager: MenuBarManager
     let barPosition: BarPosition
+    let barSize: CGFloat
     let barOpacity: Double
     let colors: ColorConfig
     let widgetConfig: WidgetConfig
@@ -62,7 +63,7 @@ struct MenuBarView: View {
     private func widgetView(for id: String, config: TOMLTable, isVertical: Bool) -> some View {
         switch id {
         case "workspaces":
-            WorkspacesWidgetView(manager: manager, isVertical: isVertical, colors: colors, config: config)
+            WorkspacesWidgetView(manager: manager, isVertical: isVertical, barSize: barSize, colors: colors, config: config)
         case "spacer":
             SpacerWidgetView(isVertical: isVertical, config: config)
         case "mode":

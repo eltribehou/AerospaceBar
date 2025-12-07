@@ -128,6 +128,7 @@ class MenuBarManager: ObservableObject {
         let contentView = MenuBarView(
             manager: self,
             barPosition: config.barPosition,
+            barSize: config.barSize,
             barOpacity: config.barOpacity,
             colors: config.colors,
             widgetConfig: config.widgets,
