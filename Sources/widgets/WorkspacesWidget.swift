@@ -331,14 +331,21 @@ struct AppIconView: View {
     let iconSize: CGFloat
     let colors: ColorConfig
 
+    @State private var icon: NSImage?
+
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            // App icon
-            if let nsImage = AppIconHelper.shared.getIcon(forAppName: appName) {
-                Image(nsImage: nsImage)
+            // App icon - show if loaded, otherwise placeholder
+            if let icon = icon {
+                Image(nsImage: icon)
                     .resizable()
                     .frame(width: iconSize, height: iconSize)
                     .cornerRadius(2)
+            } else {
+                // Placeholder while loading
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: iconSize, height: iconSize)
             }
 
             // Fullscreen badge overlay (top-right)
@@ -368,6 +375,11 @@ struct AppIconView: View {
                             .fill(Color.black.opacity(0.75))
                     )
                     .offset(x: -3, y: 3)
+            }
+        }
+        .onAppear {
+            AppIconHelper.shared.getIcon(forAppName: appName) { loadedIcon in
+                self.icon = loadedIcon
             }
         }
     }

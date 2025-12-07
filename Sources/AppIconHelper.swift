@@ -4,21 +4,29 @@ class AppIconHelper {
     static let shared = AppIconHelper()
 
     private var iconCache: [String: NSImage] = [:]
+    private let loadQueue = DispatchQueue(
+        label: "com.aerospacebar.icon-loader",
+        qos: .userInitiated
+    )
 
-    /// Get icon for an app by name
-    func getIcon(forAppName appName: String) -> NSImage? {
-        // Check cache first
+    /// Get icon for an app by name (async with completion handler)
+    func getIcon(forAppName appName: String, completion: @escaping (NSImage?) -> Void) {
+        // Check cache first (synchronous, fast)
         if let cached = iconCache[appName] {
-            return cached
+            completion(cached)
+            return
         }
 
-        // Try to find the app and get its icon
-        if let icon = findAndLoadIcon(appName: appName) {
-            iconCache[appName] = icon
-            return icon
-        }
+        // Load on background queue
+        loadQueue.async { [weak self] in
+            let icon = self?.findAndLoadIcon(appName: appName)
 
-        return nil
+            DispatchQueue.main.async {
+                // Cache on main thread
+                self?.iconCache[appName] = icon
+                completion(icon)
+            }
+        }
     }
 
     private func findAndLoadIcon(appName: String) -> NSImage? {

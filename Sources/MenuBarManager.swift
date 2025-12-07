@@ -210,29 +210,39 @@ class MenuBarManager: ObservableObject {
     private func refreshWorkspaces() {
         DebugLogger.log("Refreshing workspaces - querying Aerospace CLI")
 
-        currentWorkspace = aerospaceClient.getCurrentWorkspace()
-        var apps = aerospaceClient.getAppsPerWorkspace()
+        // Fetch current workspace (async, non-blocking)
+        aerospaceClient.getCurrentWorkspace { [weak self] workspace in
+            guard let self = self else { return }
 
-        // Always include current workspace, even if empty
-        if let current = currentWorkspace, apps[current] == nil {
-            apps[current] = []
+            // Fetch apps per workspace (async, non-blocking)
+            self.aerospaceClient.getAppsPerWorkspace { apps in
+                // Already on main thread via completion
+                var updatedApps = apps
+
+                // Always include current workspace, even if empty
+                if let current = workspace, updatedApps[current] == nil {
+                    updatedApps[current] = []
+                }
+
+                // Update @Published properties (on main thread)
+                self.currentWorkspace = workspace
+                self.appsPerWorkspace = updatedApps
+                self.workspaces = Array(updatedApps.keys)
+                    .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+
+                DebugLogger.log("Refresh complete - current workspace: \(workspace ?? "none"), \(self.workspaces.count) workspaces total")
+            }
         }
-
-        // Assign the complete dictionary in one go
-        appsPerWorkspace = apps
-
-        // Build workspace list with natural sorting (e.g., f5, f9, f10, f11 instead of f10, f11, f5, f9)
-        workspaces = Array(apps.keys).sorted { $0.localizedStandardCompare($1) == .orderedAscending }
-
-        DebugLogger.log("Refresh complete - current workspace: \(currentWorkspace ?? "none"), \(workspaces.count) workspaces total")
     }
 
     private func refreshMode() {
         DebugLogger.log("Refreshing mode - querying Aerospace CLI")
 
-        currentMode = aerospaceClient.getCurrentMode()
-
-        DebugLogger.log("Mode refresh complete - current mode: \(currentMode ?? "none")")
+        // Fetch mode (async, non-blocking)
+        aerospaceClient.getCurrentMode { [weak self] mode in
+            self?.currentMode = mode
+            DebugLogger.log("Mode refresh complete - current mode: \(mode ?? "none")")
+        }
     }
 
     private func refreshAudio() {
@@ -250,11 +260,12 @@ class MenuBarManager: ObservableObject {
     func switchToWorkspace(_ workspace: String) {
         DebugLogger.log("User clicked workspace '\(workspace)' - switching and refreshing")
 
-        aerospaceClient.switchToWorkspace(workspace)
-        // Refresh immediately after switching (no debouncing for user-initiated actions)
-        // Small delay allows Aerospace to complete the workspace switch
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
-            self?.refreshWorkspaces()
+        // Switch workspace (async, non-blocking)
+        aerospaceClient.switchToWorkspace(workspace) { [weak self] in
+            // After switch completes, wait briefly then refresh
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self?.refreshWorkspaces()  // Now also async
+            }
         }
     }
 }

@@ -3,41 +3,53 @@ import Foundation
 class AerospaceClient {
     private let aerospaceCommand: String
     private let config: Config
+    private let executionQueue = DispatchQueue(
+        label: "com.aerospacebar.aerospace-client",
+        qos: .userInitiated
+    )
 
     init(config: Config) {
         self.config = config
         self.aerospaceCommand = config.aerospacePath
     }
 
-    /// Get list of non-hidden workspaces
-    func getWorkspaces() -> [String] {
-        let output = runCommand(arguments: ["list-workspaces", "--all"])
-        return output
-            .components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .filter { !$0.isEmpty }
+    /// Get list of non-hidden workspaces (async)
+    func getWorkspaces(completion: @escaping ([String]) -> Void) {
+        runCommand(arguments: ["list-workspaces", "--all"]) { output in
+            let workspaces = output
+                .components(separatedBy: .newlines)
+                .map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }
+            completion(workspaces)
+        }
     }
 
-    /// Get current workspace
-    func getCurrentWorkspace() -> String? {
-        let output = runCommand(arguments: ["list-workspaces", "--focused"])
-        let workspace = output.trimmingCharacters(in: .whitespacesAndNewlines)
-        return workspace.isEmpty ? nil : workspace
+    /// Get current workspace (async)
+    func getCurrentWorkspace(completion: @escaping (String?) -> Void) {
+        runCommand(arguments: ["list-workspaces", "--focused"]) { output in
+            let workspace = output.trimmingCharacters(in: .whitespacesAndNewlines)
+            completion(workspace.isEmpty ? nil : workspace)
+        }
     }
 
-    /// Switch to a specific workspace
-    func switchToWorkspace(_ workspace: String) {
-        _ = runCommand(arguments: ["workspace", workspace])
+    /// Switch to a specific workspace (async)
+    func switchToWorkspace(_ workspace: String, completion: @escaping () -> Void) {
+        runCommand(arguments: ["workspace", workspace]) { _ in
+            completion()
+        }
     }
 
-    /// Get current mode from aerospace
+    /// Get current mode from aerospace (async)
     /// Returns nil if mode-command is not configured
     /// Returns current mode string if successful (Aerospace always has an active mode)
-    func getCurrentMode() -> String? {
+    func getCurrentMode(completion: @escaping (String?) -> Void) {
         // If mode command not configured, return nil immediately
         guard let modeCommand = config.modeCommand else {
             DebugLogger.log("Mode command not configured, skipping mode query")
-            return nil
+            DispatchQueue.main.async {
+                completion(nil)
+            }
+            return
         }
 
         DebugLogger.log("Querying current mode with command: \(modeCommand)")
@@ -47,29 +59,50 @@ class AerospaceClient {
 
         guard !arguments.isEmpty else {
             DebugLogger.log("Mode command is empty after parsing")
-            return nil
+            DispatchQueue.main.async {
+                completion(nil)
+            }
+            return
         }
 
-        let output = runCommand(arguments: arguments)
-        let mode = output.trimmingCharacters(in: .whitespacesAndNewlines)
+        runCommand(arguments: arguments) { [weak self] output in
+            guard let self = self else {
+                completion(nil)
+                return
+            }
 
-        if mode.isEmpty {
-            let errorMsg = "WARNING: Mode query returned empty result. Command: \(aerospaceCommand) \(arguments.joined(separator: " "))"
-            DebugLogger.log(errorMsg)
-            fputs(errorMsg + "\n", stderr)
-            // Return "Error" to indicate failure
-            return "Error"
+            let mode = output.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            if mode.isEmpty {
+                let errorMsg = "WARNING: Mode query returned empty result. Command: \(self.aerospaceCommand) \(arguments.joined(separator: " "))"
+                DebugLogger.log(errorMsg)
+                fputs(errorMsg + "\n", stderr)
+                // Return "Error" to indicate failure
+                completion("Error")
+                return
+            }
+
+            DebugLogger.log("Current mode: \(mode)")
+            completion(mode)
         }
-
-        DebugLogger.log("Current mode: \(mode)")
-        return mode
     }
 
-    /// Get apps grouped by workspace with fullscreen status and window counts
+    /// Get apps grouped by workspace with fullscreen status and window counts (async)
     /// Returns a dictionary mapping workspace names to arrays of AppInfo
-    func getAppsPerWorkspace() -> [String: [AppInfo]] {
-        let output = runCommand(arguments: ["list-windows", "--all", "--format", "%{workspace}|%{app-name}|%{window-is-fullscreen}"])
+    func getAppsPerWorkspace(completion: @escaping ([String: [AppInfo]]) -> Void) {
+        runCommand(arguments: ["list-windows", "--all", "--format", "%{workspace}|%{app-name}|%{window-is-fullscreen}"]) { output in
+            // Parse on background queue
+            let result = self.parseAppsPerWorkspace(output: output)
 
+            // Return result on main queue
+            DispatchQueue.main.async {
+                completion(result)
+            }
+        }
+    }
+
+    /// Parse apps per workspace data (runs on background queue)
+    private func parseAppsPerWorkspace(output: String) -> [String: [AppInfo]] {
         var appsPerWorkspace: [String: [AppInfo]] = [:]
         var fullscreenStatus: [String: [String: Bool]] = [:] // workspace -> appName -> isFullscreen
         var windowCounts: [String: [String: Int]] = [:] // workspace -> appName -> windowCount
@@ -117,25 +150,42 @@ class AerospaceClient {
         return appsPerWorkspace
     }
 
-    /// Run aerospace command and return output
-    private func runCommand(arguments: [String]) -> String {
-        let process = Process()
-        let pipe = Pipe()
+    /// Run aerospace command and return output (async)
+    /// Executes on background queue, calls completion on main queue
+    private func runCommand(arguments: [String], completion: @escaping (String) -> Void) {
+        executionQueue.async { [weak self] in
+            guard let self = self else {
+                DispatchQueue.main.async {
+                    completion("")
+                }
+                return
+            }
 
-        process.executableURL = URL(fileURLWithPath: aerospaceCommand)
-        process.arguments = arguments
-        process.standardOutput = pipe
-        process.standardError = pipe
+            let process = Process()
+            let pipe = Pipe()
 
-        do {
-            try process.run()
-            process.waitUntilExit()
+            process.executableURL = URL(fileURLWithPath: self.aerospaceCommand)
+            process.arguments = arguments
+            process.standardOutput = pipe
+            process.standardError = pipe
 
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            return String(data: data, encoding: .utf8) ?? ""
-        } catch {
-            print("Error running aerospace command: \(error)")
-            return ""
+            do {
+                try process.run()
+                process.waitUntilExit()  // Now blocks BACKGROUND thread only
+
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                let output = String(data: data, encoding: .utf8) ?? ""
+
+                // Call completion on main queue
+                DispatchQueue.main.async {
+                    completion(output)
+                }
+            } catch {
+                print("Error running aerospace command: \(error)")
+                DispatchQueue.main.async {
+                    completion("")
+                }
+            }
         }
     }
 }
