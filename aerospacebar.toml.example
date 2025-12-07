@@ -37,6 +37,11 @@ refresh-debounce-interval = 150
 # Default: none (disabled)
 # mode-command = "list-modes --current"
 
+# Show window count badge on app icons when an app has multiple windows
+# Displays a small badge with the number of windows in the bottom-left corner
+# Default: true
+show-window-count = true
+
 # Color customization
 # All colors support hex formats: #RGB, #RRGGBB, or #RRGGBBAA (with alpha)
 # If [colors] section is omitted or specific colors are not set, defaults will be used

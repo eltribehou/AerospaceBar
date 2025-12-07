@@ -7,6 +7,7 @@ struct MenuBarView: View {
     let barPosition: BarPosition
     let barSize: CGFloat
     let barOpacity: Double
+    let showWindowCount: Bool
     let colors: ColorConfig
     let widgetConfig: WidgetConfig
     let onQuit: () -> Void
@@ -63,7 +64,7 @@ struct MenuBarView: View {
     private func widgetView(for id: String, config: TOMLTable, isVertical: Bool) -> some View {
         switch id {
         case "workspaces":
-            WorkspacesWidgetView(manager: manager, isVertical: isVertical, barSize: barSize, colors: colors, config: config)
+            WorkspacesWidgetView(manager: manager, isVertical: isVertical, barSize: barSize, showWindowCount: showWindowCount, colors: colors, config: config)
         case "spacer":
             SpacerWidgetView(isVertical: isVertical, config: config)
         case "mode":

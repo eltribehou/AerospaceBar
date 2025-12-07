@@ -65,13 +65,14 @@ class AerospaceClient {
         return mode
     }
 
-    /// Get apps grouped by workspace with fullscreen status
+    /// Get apps grouped by workspace with fullscreen status and window counts
     /// Returns a dictionary mapping workspace names to arrays of AppInfo
     func getAppsPerWorkspace() -> [String: [AppInfo]] {
         let output = runCommand(arguments: ["list-windows", "--all", "--format", "%{workspace}|%{app-name}|%{window-is-fullscreen}"])
 
         var appsPerWorkspace: [String: [AppInfo]] = [:]
         var fullscreenStatus: [String: [String: Bool]] = [:] // workspace -> appName -> isFullscreen
+        var windowCounts: [String: [String: Int]] = [:] // workspace -> appName -> windowCount
 
         let lines = output
             .components(separatedBy: .newlines)
@@ -87,22 +88,29 @@ class AerospaceClient {
             let isFullscreenStr = components[2].lowercased()
             let isFullscreen = (isFullscreenStr == "true" || isFullscreenStr == "yes" || isFullscreenStr == "1")
 
-            // Track fullscreen status - if ANY window of an app is fullscreen, mark the app as fullscreen
+            // Initialize dictionaries if needed
             if fullscreenStatus[workspace] == nil {
                 fullscreenStatus[workspace] = [:]
+                windowCounts[workspace] = [:]
             }
+
+            // Track fullscreen status - if ANY window of an app is fullscreen, mark the app as fullscreen
             if fullscreenStatus[workspace]![appName] == nil {
                 fullscreenStatus[workspace]![appName] = isFullscreen
+                windowCounts[workspace]![appName] = 1
             } else {
                 // If any window is fullscreen, mark app as fullscreen
                 fullscreenStatus[workspace]![appName] = fullscreenStatus[workspace]![appName]! || isFullscreen
+                // Increment window count
+                windowCounts[workspace]![appName]! += 1
             }
         }
 
         // Convert to AppInfo array
         for (workspace, apps) in fullscreenStatus {
             appsPerWorkspace[workspace] = apps.map { appName, isFullscreen in
-                AppInfo(name: appName, isFullscreen: isFullscreen)
+                let count = windowCounts[workspace]?[appName] ?? 1
+                return AppInfo(name: appName, isFullscreen: isFullscreen, windowCount: count)
             }.sorted { $0.name < $1.name }
         }
 

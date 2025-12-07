@@ -130,6 +130,7 @@ class MenuBarManager: ObservableObject {
             barPosition: config.barPosition,
             barSize: config.barSize,
             barOpacity: config.barOpacity,
+            showWindowCount: config.showWindowCount,
             colors: config.colors,
             widgetConfig: config.widgets,
             onQuit: {

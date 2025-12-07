@@ -7,6 +7,7 @@ struct WorkspacesWidgetView: View {
     @ObservedObject var manager: MenuBarManager
     let isVertical: Bool
     let barSize: CGFloat
+    let showWindowCount: Bool
     let colors: ColorConfig
     let showCount: Bool
     let spacing: CGFloat
@@ -14,10 +15,11 @@ struct WorkspacesWidgetView: View {
     let borderMargin: CGFloat
     let maxWorkspaceSize: CGFloat?
 
-    init(manager: MenuBarManager, isVertical: Bool, barSize: CGFloat, colors: ColorConfig, config: TOMLTable?) {
+    init(manager: MenuBarManager, isVertical: Bool, barSize: CGFloat, showWindowCount: Bool, colors: ColorConfig, config: TOMLTable?) {
         self.manager = manager
         self.isVertical = isVertical
         self.barSize = barSize
+        self.showWindowCount = showWindowCount
         self.colors = colors
 
         // Parse parameters with defaults
@@ -56,6 +58,7 @@ struct WorkspacesWidgetView: View {
                 apps: manager.appsPerWorkspace[workspace] ?? [],
                 isVertical: isVertical,
                 barSize: barSize,
+                showWindowCount: showWindowCount,
                 colors: colors,
                 showCount: showCount,
                 iconSize: iconSize,
@@ -75,6 +78,7 @@ struct WorkspaceButton: View {
     let apps: [AppInfo]
     let isVertical: Bool
     let barSize: CGFloat
+    let showWindowCount: Bool
     let colors: ColorConfig
     let showCount: Bool
     let iconSize: CGFloat
@@ -143,6 +147,8 @@ struct WorkspaceButton: View {
                                     AppIconView(
                                         appName: apps[index].name,
                                         isFullscreen: apps[index].isFullscreen,
+                                        windowCount: apps[index].windowCount,
+                                        showWindowCount: showWindowCount,
                                         iconSize: iconSize,
                                         colors: colors
                                     )
@@ -181,6 +187,8 @@ struct WorkspaceButton: View {
                         AppIconView(
                             appName: appInfo.name,
                             isFullscreen: appInfo.isFullscreen,
+                            windowCount: appInfo.windowCount,
+                            showWindowCount: showWindowCount,
                             iconSize: iconSize,
                             colors: colors
                         )
@@ -314,10 +322,12 @@ struct WorkspaceButton: View {
     }
 }
 
-/// Individual app icon view with fullscreen badge
+/// Individual app icon view with fullscreen badge and window count
 struct AppIconView: View {
     let appName: String
     let isFullscreen: Bool
+    let windowCount: Int
+    let showWindowCount: Bool
     let iconSize: CGFloat
     let colors: ColorConfig
 
@@ -331,7 +341,7 @@ struct AppIconView: View {
                     .cornerRadius(2)
             }
 
-            // Fullscreen badge overlay
+            // Fullscreen badge overlay (top-right)
             if isFullscreen {
                 ZStack {
                     Circle()
@@ -343,6 +353,21 @@ struct AppIconView: View {
                         .foregroundColor(colors.fullscreenBadgeSymbol)
                 }
                 .offset(x: 2, y: -2)
+            }
+        }
+        .overlay(alignment: .bottomLeading) {
+            // Window count badge (bottom-left, only if enabled and > 1 window)
+            if showWindowCount && windowCount > 1 {
+                Text("\(windowCount)")
+                    .font(.system(size: 7, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 2.5)
+                    .padding(.vertical, 1)
+                    .background(
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color.black.opacity(0.75))
+                    )
+                    .offset(x: -3, y: 3)
             }
         }
     }

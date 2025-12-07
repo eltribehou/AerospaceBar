@@ -102,6 +102,7 @@ struct Config {
     let barOpacity: Double  // 0.0 (transparent) to 1.0 (opaque)
     let debounceInterval: Int  // in milliseconds
     let modeCommand: String?  // Optional command to get current mode (e.g., "list-modes --current")
+    let showWindowCount: Bool  // Show window count badge on app icons when > 1 window
     let colors: ColorConfig
     let widgets: WidgetConfig
 
@@ -112,6 +113,7 @@ struct Config {
         barOpacity: 1.0,  // Fully opaque by default
         debounceInterval: 150,  // 150ms default - balances responsiveness and efficiency
         modeCommand: nil,  // Disabled by default
+        showWindowCount: true,  // Show window count by default
         colors: .default,
         widgets: .default
     )
@@ -214,6 +216,14 @@ struct Config {
         // Full command with parameters to get current mode (e.g., "list-modes --current")
         let modeCommand: String? = table["mode-command"]?.string
 
+        // Read show-window-count setting, fall back to default (true) if not specified
+        let showWindowCount: Bool
+        if let showWindowCountValue = table["show-window-count"]?.bool {
+            showWindowCount = showWindowCountValue
+        } else {
+            showWindowCount = Config.default.showWindowCount
+        }
+
         // Read [colors] section if present
         let colors: ColorConfig
         if let colorsTable = table["colors"]?.table {
@@ -260,6 +270,6 @@ struct Config {
             widgets = .default
         }
 
-        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, barOpacity: barOpacity, debounceInterval: debounceInterval, modeCommand: modeCommand, colors: colors, widgets: widgets)
+        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, barOpacity: barOpacity, debounceInterval: debounceInterval, modeCommand: modeCommand, showWindowCount: showWindowCount, colors: colors, widgets: widgets)
     }
 }
