@@ -152,6 +152,7 @@ struct WorkspaceButton: View {
                                         iconSize: iconSize,
                                         colors: colors
                                     )
+                                    .id(apps[index].name)  // Force unique identity per app
                                 }
                             }
                         }
