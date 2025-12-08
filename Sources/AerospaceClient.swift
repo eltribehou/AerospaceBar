@@ -5,7 +5,8 @@ class AerospaceClient {
     private let config: Config
     private let executionQueue = DispatchQueue(
         label: "com.aerospacebar.aerospace-client",
-        qos: .userInitiated
+        qos: .userInitiated,
+        attributes: .concurrent
     )
 
     init(config: Config) {
@@ -91,13 +92,9 @@ class AerospaceClient {
     /// Returns a dictionary mapping workspace names to arrays of AppInfo
     func getAppsPerWorkspace(completion: @escaping ([String: [AppInfo]]) -> Void) {
         runCommand(arguments: ["list-windows", "--all", "--format", "%{workspace}|%{app-name}|%{window-is-fullscreen}"]) { output in
-            // Parse on background queue
+            // runCommand already dispatches to main thread, so we're on main thread here
             let result = self.parseAppsPerWorkspace(output: output)
-
-            // Return result on main queue
-            DispatchQueue.main.async {
-                completion(result)
-            }
+            completion(result)
         }
     }
 
@@ -169,9 +166,28 @@ class AerospaceClient {
             process.standardOutput = pipe
             process.standardError = pipe
 
+            // Create timeout timer
+            var timedOut = false
+            let timeout = DispatchWorkItem {
+                if process.isRunning {
+                    process.terminate()
+                    timedOut = true
+                }
+            }
+            DispatchQueue.global().asyncAfter(deadline: .now() + 5.0, execute: timeout)
+
             do {
                 try process.run()
                 process.waitUntilExit()  // Now blocks BACKGROUND thread only
+                timeout.cancel()  // Cancel timeout if completed
+
+                if timedOut {
+                    print("Aerospace command timed out: \(arguments)")
+                    DispatchQueue.main.async {
+                        completion("")
+                    }
+                    return
+                }
 
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
                 let output = String(data: data, encoding: .utf8) ?? ""
@@ -181,6 +197,7 @@ class AerospaceClient {
                     completion(output)
                 }
             } catch {
+                timeout.cancel()
                 print("Error running aerospace command: \(error)")
                 DispatchQueue.main.async {
                     completion("")
