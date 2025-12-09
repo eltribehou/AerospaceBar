@@ -6,6 +6,7 @@ class MenuBarManager: ObservableObject {
     private let aerospaceClient: AerospaceClient
     private let audioClient: AudioClient
     private let config: Config
+    @Published var currentBarPosition: BarPosition?  // Track current bar position
 
     // Debounce timers to prevent excessive refresh calls during rapid events
     // Uses trailing-edge debouncing: waits for activity to stop before refreshing
@@ -15,7 +16,6 @@ class MenuBarManager: ObservableObject {
     @Published var workspaces: [String] = []
     @Published var currentWorkspace: String?
     @Published var appsPerWorkspace: [String: [AppInfo]] = [:]
-    @Published var currentTime = Date()
     @Published var currentMode: String?  // Current Aerospace keybind mode (nil if mode-command not configured)
     @Published var currentAudioDevice: AudioDeviceInfo?  // Current audio output device
 
@@ -52,10 +52,19 @@ class MenuBarManager: ObservableObject {
             object: nil,
             suspensionBehavior: .deliverImmediately
         )
+
+        // Listen for display configuration changes (main display change, connect/disconnect)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleScreenParametersChange),
+            name: NSApplication.didChangeScreenParametersNotification,
+            object: nil
+        )
     }
 
     deinit {
         DistributedNotificationCenter.default().removeObserver(self)
+        NotificationCenter.default.removeObserver(self)
     }
 
     @objc private func handleRefreshWindowsNotification() {
@@ -114,6 +123,27 @@ class MenuBarManager: ObservableObject {
         refreshAudio()
     }
 
+    @objc private func handleScreenParametersChange() {
+        guard let screen = NSScreen.main, let window = window else {
+            return
+        }
+
+        // Resolve position for the current main display
+        let newPosition = config.barPosition.resolve(for: screen)
+
+        // Check if position changed
+        if let currentPosition = currentBarPosition, currentPosition == newPosition {
+            return
+        }
+
+        // Update position (triggers SwiftUI re-render via @Published)
+        currentBarPosition = newPosition
+
+        // Update window frame for new position
+        let newFrame = calculateWindowFrame(for: screen, position: newPosition)
+        window.setFrame(newFrame, display: true, animate: false)
+    }
+
     func setup() {
         // Get initial workspaces, mode, and audio (no debouncing on startup - need immediate state)
         DebugLogger.log("App startup - performing initial workspace, mode, and audio refresh")
@@ -124,10 +154,23 @@ class MenuBarManager: ObservableObject {
         // Start listening for audio device and volume changes
         audioClient.startListening()
 
-        // Create the menubar window with the manager as observed object
+        // Create initial window
+        createWindow()
+    }
+
+    private func createWindow() {
+        // Get main screen and resolve position
+        guard let screen = NSScreen.main else {
+            print("Error: No main screen available")
+            return
+        }
+
+        let resolvedPosition = config.barPosition.resolve(for: screen)
+        currentBarPosition = resolvedPosition
+
+        // Create content view
         let contentView = MenuBarView(
             manager: self,
-            barPosition: config.barPosition,
             barSize: config.barSize,
             barOpacity: config.barOpacity,
             showWindowCount: config.showWindowCount,
@@ -140,10 +183,10 @@ class MenuBarManager: ObservableObject {
 
         let hostingView = NSHostingView(rootView: contentView)
 
-        // Create window
-        let screen = NSScreen.main!
-        let windowFrame = calculateWindowFrame(for: screen, position: config.barPosition)
+        // Calculate window frame for the resolved position
+        let windowFrame = calculateWindowFrame(for: screen, position: resolvedPosition)
 
+        // Create new window
         window = NSWindow(
             contentRect: windowFrame,
             styleMask: [.borderless, .fullSizeContentView],
@@ -157,11 +200,6 @@ class MenuBarManager: ObservableObject {
         window?.level = .statusBar  // Higher level to occupy menubar area when system menubar is hidden
         window?.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         window?.makeKeyAndOrderFront(nil)
-
-        // Update clock every second
-        Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.currentTime = Date()
-        }
     }
 
     private func calculateWindowFrame(for screen: NSScreen, position: BarPosition) -> NSRect {
@@ -240,7 +278,9 @@ class MenuBarManager: ObservableObject {
 
         // Fetch mode (async, non-blocking)
         aerospaceClient.getCurrentMode { [weak self] mode in
-            self?.currentMode = mode
+            guard let self = self else { return }
+
+            self.currentMode = mode
             DebugLogger.log("Mode refresh complete - current mode: \(mode ?? "none")")
         }
     }

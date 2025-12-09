@@ -4,7 +4,6 @@ import TOMLKit
 
 struct MenuBarView: View {
     @ObservedObject var manager: MenuBarManager
-    let barPosition: BarPosition
     let barSize: CGFloat
     let barOpacity: Double
     let showWindowCount: Bool
@@ -14,11 +13,13 @@ struct MenuBarView: View {
 
     var body: some View {
         Group {
-            switch barPosition {
+            switch manager.currentBarPosition {
             case .top, .bottom:
                 horizontalLayout
             case .left, .right:
                 verticalLayout
+            case .none:
+                EmptyView()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

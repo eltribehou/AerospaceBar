@@ -1,12 +1,52 @@
 import Foundation
 import TOMLKit
 import SwiftUI
+import AppKit
 
 enum BarPosition: String {
     case top
     case bottom
     case left
     case right
+}
+
+struct BarPositionConfig {
+    let rules: [(displayPattern: String?, position: BarPosition)]
+
+    // Resolve position for a specific display
+    func resolve(for screen: NSScreen) -> BarPosition {
+        let displayName = screen.localizedName
+
+        for rule in rules {
+            if let pattern = rule.displayPattern {
+                // Try regex match
+                if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+                   regex.firstMatch(in: displayName, range: NSRange(location: 0, length: displayName.utf16.count)) != nil {
+                    print("[BAR-POSITION] Display '\(displayName)' matched pattern '\(pattern)' -> \(rule.position.rawValue)")
+                    return rule.position
+                }
+            } else {
+                // No pattern = default/fallback rule
+                print("[BAR-POSITION] Display '\(displayName)' using default position -> \(rule.position.rawValue)")
+                return rule.position
+            }
+        }
+
+        // Fallback to first position if no match (shouldn't happen)
+        let fallback = rules.first?.position ?? .top
+        print("[BAR-POSITION] Display '\(displayName)' no match, using fallback -> \(fallback.rawValue)")
+        return fallback
+    }
+
+    // Simple constructor for backward compatibility (single position for all displays)
+    init(position: BarPosition) {
+        self.rules = [(displayPattern: nil, position: position)]
+    }
+
+    // Constructor with conditional rules
+    init(rules: [(displayPattern: String?, position: BarPosition)]) {
+        self.rules = rules
+    }
 }
 
 struct ColorConfig {
@@ -97,7 +137,7 @@ struct WidgetConfig {
 
 struct Config {
     let aerospacePath: String
-    let barPosition: BarPosition
+    let barPosition: BarPositionConfig
     let barSize: CGFloat
     let barOpacity: Double  // 0.0 (transparent) to 1.0 (opaque)
     let debounceInterval: Int  // in milliseconds
@@ -108,7 +148,7 @@ struct Config {
 
     static let `default` = Config(
         aerospacePath: "/usr/local/bin/hyprspace",
-        barPosition: .top,
+        barPosition: BarPositionConfig(position: .top),
         barSize: 25,
         barOpacity: 1.0,  // Fully opaque by default
         debounceInterval: 150,  // 150ms default - balances responsiveness and efficiency
@@ -139,8 +179,11 @@ struct Config {
                 print("[CONFIG] Found config file at: \(path)")
                 DebugLogger.log("Found config file at: \(path)")
                 if let config = try? loadFromFile(path: path) {
-                    print("[CONFIG] Loaded - position: \(config.barPosition), opacity: \(config.barOpacity), mode-command: \(config.modeCommand ?? "nil")")
-                    DebugLogger.log("Loaded config - position: \(config.barPosition), opacity: \(config.barOpacity), mode-command: \(config.modeCommand ?? "nil")")
+                    let positionDesc = config.barPosition.rules.count == 1 && config.barPosition.rules.first?.displayPattern == nil
+                        ? config.barPosition.rules.first?.position.rawValue ?? "unknown"
+                        : "conditional (\(config.barPosition.rules.count) rules)"
+                    print("[CONFIG] Loaded - position: \(positionDesc), opacity: \(config.barOpacity), mode-command: \(config.modeCommand ?? "nil")")
+                    DebugLogger.log("Loaded config - position: \(positionDesc), opacity: \(config.barOpacity), mode-command: \(config.modeCommand ?? "nil")")
                     return config
                 } else {
                     print("[CONFIG] Failed to parse config file at: \(path)")
@@ -171,22 +214,52 @@ struct Config {
         }
 
         // Read bar-position setting, fall back to default if not specified
-        let barPosition: BarPosition
-        if let positionString = table["bar-position"]?.string,
-           let position = BarPosition(rawValue: positionString) {
-            barPosition = position
+        // Supports two formats:
+        // 1. Simple string: bar-position = "top"
+        // 2. Conditional array: bar-position = [{ display = "^Built-in.*$", value = "top" }, "right"]
+        let barPosition: BarPositionConfig
+        if let positionArray = table["bar-position"]?.array {
+            // Array format with conditional rules
+            var rules: [(displayPattern: String?, position: BarPosition)] = []
+
+            for item in positionArray {
+                if let positionString = item.string, let position = BarPosition(rawValue: positionString) {
+                    // Simple position string (default/fallback rule)
+                    rules.append((displayPattern: nil, position: position))
+                } else if let ruleTable = item.table,
+                          let displayPattern = ruleTable["display"]?.string,
+                          let valueString = ruleTable["value"]?.string,
+                          let position = BarPosition(rawValue: valueString) {
+                    // Conditional rule with display pattern
+                    rules.append((displayPattern: displayPattern, position: position))
+                } else {
+                    print("Warning: Invalid bar-position rule, skipping")
+                }
+            }
+
+            if rules.isEmpty {
+                barPosition = Config.default.barPosition
+            } else {
+                barPosition = BarPositionConfig(rules: rules)
+            }
+        } else if let positionString = table["bar-position"]?.string,
+                  let position = BarPosition(rawValue: positionString) {
+            // Simple string format (backward compatible)
+            barPosition = BarPositionConfig(position: position)
         } else {
             barPosition = Config.default.barPosition
         }
 
         // Read bar-size setting, fall back to position-specific default if not specified
+        // For conditional positions, use default for the first rule's position
         let barSize: CGFloat
         if let sizeValue = table["bar-size"]?.int {
             barSize = CGFloat(sizeValue)
         } else if let sizeValue = table["bar-size"]?.double {
             barSize = CGFloat(sizeValue)
         } else {
-            barSize = Config.defaultBarSize(for: barPosition)
+            let firstPosition = barPosition.rules.first?.position ?? .top
+            barSize = Config.defaultBarSize(for: firstPosition)
         }
 
         // Read bar-opacity setting, fall back to default (1.0) if not specified
