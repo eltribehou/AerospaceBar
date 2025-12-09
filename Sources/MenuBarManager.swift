@@ -154,8 +154,8 @@ class MenuBarManager: ObservableObject {
         window?.contentView = hostingView
         window?.backgroundColor = .clear  // Let SwiftUI handle the background with opacity
         window?.isOpaque = false
-        window?.level = .floating
-        window?.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
+        window?.level = .statusBar  // Higher level to occupy menubar area when system menubar is hidden
+        window?.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         window?.makeKeyAndOrderFront(nil)
 
         // Update clock every second
