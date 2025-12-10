@@ -3,6 +3,158 @@ import TOMLKit
 import SwiftUI
 import AppKit
 
+// MARK: - Conditional Configuration System
+
+/// Context object providing all information needed for rule matching
+struct MatchContext {
+    let screen: NSScreen
+
+    // Current criteria
+    var displayName: String {
+        screen.localizedName
+    }
+
+    // Future criteria can be added here:
+    // var screenRatio: String { calculateRatio(screen.frame.size) }
+    // var hostname: String { ProcessInfo.processInfo.hostName }
+    // var isBuiltin: Bool { ... }
+    // var hasNotch: Bool { screen.frame.maxY - screen.visibleFrame.maxY > 24 }
+}
+
+/// Protocol for matching criteria
+protocol MatchCriterion {
+    func matches(context: MatchContext) -> Bool
+}
+
+/// Matches display name using regex pattern
+struct DisplayNameCriterion: MatchCriterion {
+    let pattern: String
+
+    func matches(context: MatchContext) -> Bool {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive) else {
+            return false
+        }
+        let range = NSRange(location: 0, length: context.displayName.utf16.count)
+        return regex.firstMatch(in: context.displayName, range: range) != nil
+    }
+}
+
+/// A rule with optional criteria and a value
+struct ConditionalRule<T> {
+    let criteria: [MatchCriterion]
+    let value: T
+
+    func matches(context: MatchContext) -> Bool {
+        // Empty criteria = always matches (fallback rule)
+        if criteria.isEmpty {
+            return true
+        }
+
+        // ALL criteria must match (AND logic)
+        return criteria.allSatisfy { $0.matches(context: context) }
+    }
+}
+
+/// Generic wrapper for conditional config values
+struct ConditionalConfig<T> {
+    let rules: [ConditionalRule<T>]
+
+    func resolve(for screen: NSScreen) -> T {
+        let context = MatchContext(screen: screen)
+
+        for rule in rules {
+            if rule.matches(context: context) {
+                return rule.value
+            }
+        }
+
+        // Fallback: return first rule's value (should always have at least one rule)
+        return rules.first!.value
+    }
+
+    // Simple constructor for backward compatibility
+    init(value: T) {
+        self.rules = [ConditionalRule(criteria: [], value: value)]
+    }
+
+    // Constructor with conditional rules
+    init(rules: [ConditionalRule<T>]) {
+        self.rules = rules
+    }
+}
+
+// MARK: - Config Parsing Helpers
+
+/// Parse criteria fields from TOML into MatchCriterion objects
+func parseCriteria(from fields: TOMLTable) -> [MatchCriterion] {
+    var criteria: [MatchCriterion] = []
+
+    if let displayPattern = fields["display"]?.string {
+        criteria.append(DisplayNameCriterion(pattern: displayPattern))
+    }
+
+    // Future criteria parsing can be added here:
+    // if let screenRatio = fields["screen-ratio"]?.string {
+    //     criteria.append(ScreenRatioCriterion(ratio: screenRatio))
+    // }
+    // if let hostnamePattern = fields["hostname"]?.string {
+    //     criteria.append(HostnameCriterion(pattern: hostnamePattern))
+    // }
+
+    return criteria
+}
+
+/// Generic parser for conditional config values
+/// Takes a TOML value and a type-specific parser function
+/// Returns ConditionalConfig with rules or nil if parsing failed
+func parseConditionalConfig<T>(
+    from tomlValue: TOMLValueConvertible?,
+    parser: (TOMLValueConvertible) -> T?
+) -> ConditionalConfig<T>? {
+    guard let tomlValue = tomlValue else {
+        return nil
+    }
+
+    // Try simple scalar value first (backward compatible)
+    if let simpleValue = parser(tomlValue) {
+        return ConditionalConfig(value: simpleValue)
+    }
+
+    // Try conditional format with rules array
+    if let array = tomlValue.array {
+        var rules: [ConditionalRule<T>] = []
+
+        for item in array {
+            if let simpleValue = parser(item) {
+                // No criteria = default/fallback rule
+                rules.append(ConditionalRule(criteria: [], value: simpleValue))
+            } else if let table = item.table,
+                      let rawValue = table["value"],
+                      let value = parser(rawValue) {
+                // Rule with criteria
+                // Build criteria fields (all fields except "value")
+                var criteriaFields = TOMLTable()
+                for (key, val) in table where key != "value" {
+                    criteriaFields[key] = val  // swiftlint:disable:this no_direct_assignment
+                }
+
+                let criteria = parseCriteria(from: criteriaFields)
+                rules.append(ConditionalRule(criteria: criteria, value: value))
+            } else {
+                print("Warning: Invalid conditional config rule, skipping")
+            }
+        }
+
+        if !rules.isEmpty {
+            return ConditionalConfig(rules: rules)
+        }
+    }
+
+    return nil
+}
+
+// MARK: - Enums
+
 enum BarPosition: String {
     case top
     case bottom
@@ -10,83 +162,7 @@ enum BarPosition: String {
     case right
 }
 
-struct BarPositionConfig {
-    let rules: [(displayPattern: String?, position: BarPosition)]
-
-    // Resolve position for a specific display
-    func resolve(for screen: NSScreen) -> BarPosition {
-        let displayName = screen.localizedName
-
-        for rule in rules {
-            if let pattern = rule.displayPattern {
-                // Try regex match
-                if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-                   regex.firstMatch(in: displayName, range: NSRange(location: 0, length: displayName.utf16.count)) != nil {
-                    print("[BAR-POSITION] Display '\(displayName)' matched pattern '\(pattern)' -> \(rule.position.rawValue)")
-                    return rule.position
-                }
-            } else {
-                // No pattern = default/fallback rule
-                print("[BAR-POSITION] Display '\(displayName)' using default position -> \(rule.position.rawValue)")
-                return rule.position
-            }
-        }
-
-        // Fallback to first position if no match (shouldn't happen)
-        let fallback = rules.first?.position ?? .top
-        print("[BAR-POSITION] Display '\(displayName)' no match, using fallback -> \(fallback.rawValue)")
-        return fallback
-    }
-
-    // Simple constructor for backward compatibility (single position for all displays)
-    init(position: BarPosition) {
-        self.rules = [(displayPattern: nil, position: position)]
-    }
-
-    // Constructor with conditional rules
-    init(rules: [(displayPattern: String?, position: BarPosition)]) {
-        self.rules = rules
-    }
-}
-
-struct BarSizeConfig {
-    let rules: [(displayPattern: String?, size: CGFloat)]
-
-    // Resolve size for a specific display
-    func resolve(for screen: NSScreen) -> CGFloat {
-        let displayName = screen.localizedName
-
-        for rule in rules {
-            if let pattern = rule.displayPattern {
-                // Try regex match
-                if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
-                   regex.firstMatch(in: displayName, range: NSRange(location: 0, length: displayName.utf16.count)) != nil {
-                    print("[BAR-SIZE] Display '\(displayName)' matched pattern '\(pattern)' -> \(rule.size)")
-                    return rule.size
-                }
-            } else {
-                // No pattern = default/fallback rule
-                print("[BAR-SIZE] Display '\(displayName)' using default size -> \(rule.size)")
-                return rule.size
-            }
-        }
-
-        // Fallback to first size if no match (shouldn't happen)
-        let fallback = rules.first?.size ?? 30
-        print("[BAR-SIZE] Display '\(displayName)' no match, using fallback -> \(fallback)")
-        return fallback
-    }
-
-    // Simple constructor for backward compatibility (single size for all displays)
-    init(size: CGFloat) {
-        self.rules = [(displayPattern: nil, size: size)]
-    }
-
-    // Constructor with conditional rules
-    init(rules: [(displayPattern: String?, size: CGFloat)]) {
-        self.rules = rules
-    }
-}
+// MARK: - Color Configuration
 
 struct ColorConfig {
     let background: Color
@@ -176,8 +252,8 @@ struct WidgetConfig {
 
 struct Config {
     let aerospacePath: String
-    let barPosition: BarPositionConfig
-    let barSize: BarSizeConfig
+    let barPosition: ConditionalConfig<BarPosition>
+    let barSize: ConditionalConfig<CGFloat>
     let barOpacity: Double  // 0.0 (transparent) to 1.0 (opaque)
     let debounceInterval: Int  // in milliseconds
     let modeCommand: String?  // Optional command to get current mode (e.g., "list-modes --current")
@@ -187,8 +263,8 @@ struct Config {
 
     static let `default` = Config(
         aerospacePath: "/usr/local/bin/hyprspace",
-        barPosition: BarPositionConfig(position: .top),
-        barSize: BarSizeConfig(size: 25),
+        barPosition: ConditionalConfig(value: .top),
+        barSize: ConditionalConfig(value: 25),
         barOpacity: 1.0,  // Fully opaque by default
         debounceInterval: 150,  // 150ms default - balances responsiveness and efficiency
         modeCommand: nil,  // Disabled by default
@@ -218,11 +294,11 @@ struct Config {
                 print("[CONFIG] Found config file at: \(path)")
                 DebugLogger.log("Found config file at: \(path)")
                 if let config = try? loadFromFile(path: path) {
-                    let positionDesc = config.barPosition.rules.count == 1 && config.barPosition.rules.first?.displayPattern == nil
-                        ? config.barPosition.rules.first?.position.rawValue ?? "unknown"
+                    let positionDesc = config.barPosition.rules.count == 1 && config.barPosition.rules.first?.criteria.isEmpty == true
+                        ? config.barPosition.rules.first?.value.rawValue ?? "unknown"
                         : "conditional (\(config.barPosition.rules.count) rules)"
-                    let sizeDesc = config.barSize.rules.count == 1 && config.barSize.rules.first?.displayPattern == nil
-                        ? String(format: "%.0f", config.barSize.rules.first?.size ?? 0)
+                    let sizeDesc = config.barSize.rules.count == 1 && config.barSize.rules.first?.criteria.isEmpty == true
+                        ? String(format: "%.0f", config.barSize.rules.first?.value ?? 0)
                         : "conditional (\(config.barSize.rules.count) rules)"
                     print("[CONFIG] Loaded - position: \(positionDesc), size: \(sizeDesc), opacity: \(config.barOpacity), mode-command: \(config.modeCommand ?? "nil")")
                     DebugLogger.log("Loaded config - position: \(positionDesc), size: \(sizeDesc), opacity: \(config.barOpacity), mode-command: \(config.modeCommand ?? "nil")")
@@ -259,90 +335,31 @@ struct Config {
         // Supports two formats:
         // 1. Simple string: bar-position = "top"
         // 2. Conditional array: bar-position = [{ display = "^Built-in.*$", value = "top" }, "right"]
-        let barPosition: BarPositionConfig
-        if let positionArray = table["bar-position"]?.array {
-            // Array format with conditional rules
-            var rules: [(displayPattern: String?, position: BarPosition)] = []
-
-            for item in positionArray {
-                if let positionString = item.string, let position = BarPosition(rawValue: positionString) {
-                    // Simple position string (default/fallback rule)
-                    rules.append((displayPattern: nil, position: position))
-                } else if let ruleTable = item.table,
-                          let displayPattern = ruleTable["display"]?.string,
-                          let valueString = ruleTable["value"]?.string,
-                          let position = BarPosition(rawValue: valueString) {
-                    // Conditional rule with display pattern
-                    rules.append((displayPattern: displayPattern, position: position))
-                } else {
-                    print("Warning: Invalid bar-position rule, skipping")
+        let barPosition = parseConditionalConfig(
+            from: table["bar-position"],
+            parser: { value in
+                if let str = value.string {
+                    return BarPosition(rawValue: str)
                 }
+                return nil
             }
-
-            if rules.isEmpty {
-                barPosition = Config.default.barPosition
-            } else {
-                barPosition = BarPositionConfig(rules: rules)
-            }
-        } else if let positionString = table["bar-position"]?.string,
-                  let position = BarPosition(rawValue: positionString) {
-            // Simple string format (backward compatible)
-            barPosition = BarPositionConfig(position: position)
-        } else {
-            barPosition = Config.default.barPosition
-        }
+        ) ?? Config.default.barPosition
 
         // Read bar-size setting, fall back to position-specific default if not specified
         // Supports two formats:
         // 1. Simple number: bar-size = 30
         // 2. Conditional array: bar-size = [{ display = "^Built-in.*$", value = 32 }, 25]
-        let barSize: BarSizeConfig
-        if let sizeArray = table["bar-size"]?.array {
-            // Array format with conditional rules
-            var rules: [(displayPattern: String?, size: CGFloat)] = []
-
-            for item in sizeArray {
-                if let sizeInt = item.int {
-                    // Simple number (default/fallback rule)
-                    rules.append((displayPattern: nil, size: CGFloat(sizeInt)))
-                } else if let sizeDouble = item.double {
-                    // Simple double (default/fallback rule)
-                    rules.append((displayPattern: nil, size: CGFloat(sizeDouble)))
-                } else if let ruleTable = item.table,
-                          let displayPattern = ruleTable["display"]?.string {
-                    // Conditional rule with display pattern
-                    let size: CGFloat
-                    if let valueInt = ruleTable["value"]?.int {
-                        size = CGFloat(valueInt)
-                    } else if let valueDouble = ruleTable["value"]?.double {
-                        size = CGFloat(valueDouble)
-                    } else {
-                        print("Warning: Invalid bar-size rule value, skipping")
-                        continue
-                    }
-                    rules.append((displayPattern: displayPattern, size: size))
-                } else {
-                    print("Warning: Invalid bar-size rule, skipping")
+        let barSize = parseConditionalConfig(
+            from: table["bar-size"],
+            parser: { value in
+                if let int = value.int {
+                    return CGFloat(int)
+                } else if let double = value.double {
+                    return CGFloat(double)
                 }
+                return nil
             }
-
-            if rules.isEmpty {
-                barSize = Config.default.barSize
-            } else {
-                barSize = BarSizeConfig(rules: rules)
-            }
-        } else if let sizeValue = table["bar-size"]?.int {
-            // Simple int format (backward compatible)
-            barSize = BarSizeConfig(size: CGFloat(sizeValue))
-        } else if let sizeValue = table["bar-size"]?.double {
-            // Simple double format (backward compatible)
-            barSize = BarSizeConfig(size: CGFloat(sizeValue))
-        } else {
-            // Fall back to position-specific default
-            let firstPosition = barPosition.rules.first?.position ?? .top
-            let defaultSize = Config.defaultBarSize(for: firstPosition)
-            barSize = BarSizeConfig(size: defaultSize)
-        }
+        ) ?? Config.default.barSize
 
         // Read bar-opacity setting, fall back to default (1.0) if not specified
         // Clamp to valid range [0.0, 1.0]

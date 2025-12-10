@@ -11,9 +11,20 @@ struct WorkspacesWidgetView: View {
     let colors: ColorConfig
     let showCount: Bool
     let spacing: CGFloat
-    let iconSize: CGFloat
+    let iconSizeConfig: ConditionalConfig<CGFloat>
     let borderMargin: CGFloat
     let maxWorkspaceSize: CGFloat?
+
+    // Computed property that resolves conditionally based on current display
+    private var iconSize: CGFloat {
+        // Trigger re-evaluation when currentBarPosition changes (indicates display switch)
+        _ = manager.currentBarPosition
+
+        if let screen = NSScreen.main {
+            return iconSizeConfig.resolve(for: screen)
+        }
+        return 14
+    }
 
     init(manager: MenuBarManager, isVertical: Bool, barSize: CGFloat, showWindowCount: Bool, colors: ColorConfig, config: TOMLTable?) {
         self.manager = manager
@@ -25,7 +36,13 @@ struct WorkspacesWidgetView: View {
         // Parse parameters with defaults
         self.showCount = config?["show-app-count"]?.bool ?? true
         self.spacing = CGFloat(config?["workspace-spacing"]?.int ?? 4)
-        self.iconSize = CGFloat(config?["icon-size"]?.int ?? 14)
+
+        // Parse icon-size with conditional support - store the config, not the resolved value
+        self.iconSizeConfig = parseConditionalConfig(
+            from: config?["icon-size"],
+            parser: { $0.int.map { CGFloat($0) } }
+        ) ?? ConditionalConfig(value: 14)
+
         self.borderMargin = CGFloat(config?["border-margin"]?.int ?? 8)
         self.maxWorkspaceSize = config?["max-workspace-size"]?.int.map { CGFloat($0) }
     }
