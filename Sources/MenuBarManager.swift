@@ -7,6 +7,7 @@ class MenuBarManager: ObservableObject {
     private let audioClient: AudioClient
     private let config: Config
     @Published var currentBarPosition: BarPosition?  // Track current bar position
+    @Published var currentBarSize: CGFloat = 30  // Track current resolved bar size
 
     // Debounce timers to prevent excessive refresh calls during rapid events
     // Uses trailing-edge debouncing: waits for activity to stop before refreshing
@@ -128,19 +129,28 @@ class MenuBarManager: ObservableObject {
             return
         }
 
-        // Resolve position for the current main display
+        // Resolve position and size for the current main display
         let newPosition = config.barPosition.resolve(for: screen)
+        let newSize = config.barSize.resolve(for: screen)
 
-        // Check if position changed
-        if let currentPosition = currentBarPosition, currentPosition == newPosition {
+        // Check if position or size changed
+        let positionChanged = currentBarPosition != newPosition
+        let sizeChanged = abs(currentBarSize - newSize) > 0.01  // Float comparison with epsilon
+
+        if !positionChanged && !sizeChanged {
             return
         }
 
-        // Update position (triggers SwiftUI re-render via @Published)
-        currentBarPosition = newPosition
+        // Update position and/or size (triggers SwiftUI re-render via @Published)
+        if positionChanged {
+            currentBarPosition = newPosition
+        }
+        if sizeChanged {
+            currentBarSize = newSize
+        }
 
-        // Update window frame for new position
-        let newFrame = calculateWindowFrame(for: screen, position: newPosition)
+        // Update window frame for new position and/or size
+        let newFrame = calculateWindowFrame(for: screen, position: newPosition, size: newSize)
         window.setFrame(newFrame, display: true, animate: false)
     }
 
@@ -168,10 +178,13 @@ class MenuBarManager: ObservableObject {
         let resolvedPosition = config.barPosition.resolve(for: screen)
         currentBarPosition = resolvedPosition
 
+        let resolvedSize = config.barSize.resolve(for: screen)
+        currentBarSize = resolvedSize
+
         // Create content view
         let contentView = MenuBarView(
             manager: self,
-            barSize: config.barSize,
+            barSize: resolvedSize,
             barOpacity: config.barOpacity,
             showWindowCount: config.showWindowCount,
             colors: config.colors,
@@ -183,8 +196,8 @@ class MenuBarManager: ObservableObject {
 
         let hostingView = NSHostingView(rootView: contentView)
 
-        // Calculate window frame for the resolved position
-        let windowFrame = calculateWindowFrame(for: screen, position: resolvedPosition)
+        // Calculate window frame for the resolved position and size
+        let windowFrame = calculateWindowFrame(for: screen, position: resolvedPosition, size: resolvedSize)
 
         // Create new window
         window = NSWindow(
@@ -202,13 +215,13 @@ class MenuBarManager: ObservableObject {
         window?.makeKeyAndOrderFront(nil)
     }
 
-    private func calculateWindowFrame(for screen: NSScreen, position: BarPosition) -> NSRect {
+    private func calculateWindowFrame(for screen: NSScreen, position: BarPosition, size: CGFloat) -> NSRect {
         switch position {
         case .top:
             // Calculate actual menubar height (accounts for notch on newer Macs)
             let menuBarHeight = screen.frame.maxY - screen.visibleFrame.maxY
             // Use the larger of configured size or menubar height (to accommodate notch)
-            let barHeight = max(config.barSize, menuBarHeight)
+            let barHeight = max(size, menuBarHeight)
             return NSRect(
                 x: screen.frame.origin.x,
                 y: screen.frame.origin.y + screen.frame.height - barHeight,
@@ -220,20 +233,20 @@ class MenuBarManager: ObservableObject {
                 x: screen.frame.origin.x,
                 y: screen.frame.origin.y,
                 width: screen.frame.width,
-                height: config.barSize
+                height: size
             )
         case .left:
             return NSRect(
                 x: screen.frame.origin.x,
                 y: screen.frame.origin.y,
-                width: config.barSize,
+                width: size,
                 height: screen.frame.height
             )
         case .right:
             return NSRect(
-                x: screen.frame.origin.x + screen.frame.width - config.barSize,
+                x: screen.frame.origin.x + screen.frame.width - size,
                 y: screen.frame.origin.y,
-                width: config.barSize,
+                width: size,
                 height: screen.frame.height
             )
         }
