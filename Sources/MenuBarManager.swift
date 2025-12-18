@@ -36,6 +36,7 @@ class MenuBarManager: ObservableObject {
     @Published var appsPerWorkspace: [String: [AppInfo]] = [:]
     @Published var currentMode: String?  // Current Aerospace keybind mode (nil if mode-command not configured)
     @Published var currentAudioDevice: AudioDeviceInfo?  // Current audio output device
+    @Published var hideOnFullscreenApps: Bool  // Runtime toggle for hiding menubar on fullscreen apps
 
     private var appObserver: AXObserver?
     private var currentObservedPID: pid_t?
@@ -43,6 +44,7 @@ class MenuBarManager: ObservableObject {
     init() {
         let config = Config.load()
         self.config = config
+        self.hideOnFullscreenApps = config.hideOnFullscreenApps
         self.aerospaceClient = AerospaceClient(config: config)
         self.audioClient = AudioClient()
 
@@ -252,6 +254,14 @@ class MenuBarManager: ObservableObject {
     }
 
     fileprivate func checkAndUpdateMenuBarVisibility() {
+        // If the feature is disabled, always show the menubar
+        guard hideOnFullscreenApps else {
+            if window?.isVisible == false {
+                window?.makeKeyAndOrderFront(nil)
+            }
+            return
+        }
+
         let isFullscreen = isFrontmostWindowFullscreen()
 
         if isFullscreen {
@@ -480,5 +490,13 @@ class MenuBarManager: ObservableObject {
                 self?.refreshWorkspaces()  // Now also async
             }
         }
+    }
+
+    func toggleHideOnFullscreenApps() {
+        hideOnFullscreenApps.toggle()
+        DebugLogger.log("Toggled hide-on-fullscreen-apps to: \(hideOnFullscreenApps)")
+
+        // Immediately update visibility based on new setting
+        checkAndUpdateMenuBarVisibility()
     }
 }

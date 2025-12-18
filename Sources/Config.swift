@@ -258,6 +258,7 @@ struct Config {
     let debounceInterval: Int  // in milliseconds
     let modeCommand: String?  // Optional command to get current mode (e.g., "list-modes --current")
     let showWindowCount: Bool  // Show window count badge on app icons when > 1 window
+    let hideOnFullscreenApps: Bool  // Hide menubar when apps enter native fullscreen
     let colors: ColorConfig
     let widgets: WidgetConfig
 
@@ -269,6 +270,7 @@ struct Config {
         debounceInterval: 150,  // 150ms default - balances responsiveness and efficiency
         modeCommand: nil,  // Disabled by default
         showWindowCount: true,  // Show window count by default
+        hideOnFullscreenApps: true,  // Hide on fullscreen by default
         colors: .default,
         widgets: .default
     )
@@ -396,6 +398,14 @@ struct Config {
             showWindowCount = Config.default.showWindowCount
         }
 
+        // Read hide-on-fullscreen-apps setting, fall back to default (true) if not specified
+        let hideOnFullscreenApps: Bool
+        if let hideOnFullscreenAppsValue = table["hide-on-fullscreen-apps"]?.bool {
+            hideOnFullscreenApps = hideOnFullscreenAppsValue
+        } else {
+            hideOnFullscreenApps = Config.default.hideOnFullscreenApps
+        }
+
         // Read [colors] section if present
         let colors: ColorConfig
         if let colorsTable = table["colors"]?.table {
@@ -442,6 +452,6 @@ struct Config {
             widgets = .default
         }
 
-        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, barOpacity: barOpacity, debounceInterval: debounceInterval, modeCommand: modeCommand, showWindowCount: showWindowCount, colors: colors, widgets: widgets)
+        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, barOpacity: barOpacity, debounceInterval: debounceInterval, modeCommand: modeCommand, showWindowCount: showWindowCount, hideOnFullscreenApps: hideOnFullscreenApps, colors: colors, widgets: widgets)
     }
 }

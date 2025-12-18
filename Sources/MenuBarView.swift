@@ -25,6 +25,20 @@ struct MenuBarView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(backgroundWithOpacity)
         .contextMenu {
+            Button(action: {
+                manager.toggleHideOnFullscreenApps()
+            }) {
+                HStack {
+                    Text("Hide on Fullscreen Apps")
+                    Spacer()
+                    if manager.hideOnFullscreenApps {
+                        Image(systemName: "checkmark")
+                    }
+                }
+            }
+
+            Divider()
+
             Button("Quit") {
                 onQuit()
             }
