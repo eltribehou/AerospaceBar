@@ -259,6 +259,7 @@ struct Config {
     let modeCommand: String?  // Optional command to get current mode (e.g., "list-modes --current")
     let showWindowCount: Bool  // Show window count badge on app icons when > 1 window
     let hideOnFullscreenApps: Bool  // Hide menubar when apps enter native fullscreen
+    let allowSystemMenubarOnTop: Bool  // Allow macOS menubar on top of aerospacebar
     let colors: ColorConfig
     let widgets: WidgetConfig
 
@@ -271,6 +272,7 @@ struct Config {
         modeCommand: nil,  // Disabled by default
         showWindowCount: true,  // Show window count by default
         hideOnFullscreenApps: true,  // Hide on fullscreen by default
+        allowSystemMenubarOnTop: false,  // Keep at status bar level by default
         colors: .default,
         widgets: .default
     )
@@ -406,6 +408,14 @@ struct Config {
             hideOnFullscreenApps = Config.default.hideOnFullscreenApps
         }
 
+        // Read allow-system-menubar-on-top setting, fall back to default (false) if not specified
+        let allowSystemMenubarOnTop: Bool
+        if let allowValue = table["allow-system-menubar-on-top"]?.bool {
+            allowSystemMenubarOnTop = allowValue
+        } else {
+            allowSystemMenubarOnTop = Config.default.allowSystemMenubarOnTop
+        }
+
         // Read [colors] section if present
         let colors: ColorConfig
         if let colorsTable = table["colors"]?.table {
@@ -452,6 +462,6 @@ struct Config {
             widgets = .default
         }
 
-        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, barOpacity: barOpacity, debounceInterval: debounceInterval, modeCommand: modeCommand, showWindowCount: showWindowCount, hideOnFullscreenApps: hideOnFullscreenApps, colors: colors, widgets: widgets)
+        return Config(aerospacePath: aerospacePath, barPosition: barPosition, barSize: barSize, barOpacity: barOpacity, debounceInterval: debounceInterval, modeCommand: modeCommand, showWindowCount: showWindowCount, hideOnFullscreenApps: hideOnFullscreenApps, allowSystemMenubarOnTop: allowSystemMenubarOnTop, colors: colors, widgets: widgets)
     }
 }

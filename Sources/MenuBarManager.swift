@@ -37,6 +37,7 @@ class MenuBarManager: ObservableObject {
     @Published var currentMode: String?  // Current Aerospace keybind mode (nil if mode-command not configured)
     @Published var currentAudioDevice: AudioDeviceInfo?  // Current audio output device
     @Published var hideOnFullscreenApps: Bool  // Runtime toggle for hiding menubar on fullscreen apps
+    @Published var allowSystemMenubarOnTop: Bool  // Runtime toggle for window level
 
     private var appObserver: AXObserver?
     private var currentObservedPID: pid_t?
@@ -45,6 +46,7 @@ class MenuBarManager: ObservableObject {
         let config = Config.load()
         self.config = config
         self.hideOnFullscreenApps = config.hideOnFullscreenApps
+        self.allowSystemMenubarOnTop = config.allowSystemMenubarOnTop
         self.aerospaceClient = AerospaceClient(config: config)
         self.audioClient = AudioClient()
 
@@ -369,7 +371,12 @@ class MenuBarManager: ObservableObject {
         window?.contentView = hostingView
         window?.backgroundColor = .clear  // Let SwiftUI handle the background with opacity
         window?.isOpaque = false
-        window?.level = .statusBar  // Higher level to occupy menubar area when system menubar is hidden
+
+        // Set window level based on allowSystemMenubarOnTop setting
+        // .floating: above apps, below system menubar (allows system menubar on top)
+        // .statusBar: at system menubar level (current behavior)
+        window?.level = allowSystemMenubarOnTop ? .floating : .statusBar
+
         window?.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         window?.makeKeyAndOrderFront(nil)
     }
@@ -498,5 +505,25 @@ class MenuBarManager: ObservableObject {
 
         // Immediately update visibility based on new setting
         checkAndUpdateMenuBarVisibility()
+    }
+
+    func toggleAllowSystemMenubarOnTop() {
+        allowSystemMenubarOnTop.toggle()
+        DebugLogger.log("Toggled allow-system-menubar-on-top to: \(allowSystemMenubarOnTop)")
+
+        // Update window level immediately
+        updateWindowLevel()
+    }
+
+    private func updateWindowLevel() {
+        guard let window = window else { return }
+
+        // Set window level based on current setting
+        // .floating = above apps, below system menubar
+        // .statusBar = at system menubar level
+        let newLevel: NSWindow.Level = allowSystemMenubarOnTop ? .floating : .statusBar
+        window.level = newLevel
+
+        DebugLogger.log("Updated window level to: \(allowSystemMenubarOnTop ? "floating (below menubar)" : "statusBar (at menubar level)")")
     }
 }

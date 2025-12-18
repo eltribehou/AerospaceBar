@@ -37,6 +37,18 @@ struct MenuBarView: View {
                 }
             }
 
+            Button(action: {
+                manager.toggleAllowSystemMenubarOnTop()
+            }) {
+                HStack {
+                    Text("Allow System Menubar on Top")
+                    Spacer()
+                    if manager.allowSystemMenubarOnTop {
+                        Image(systemName: "checkmark")
+                    }
+                }
+            }
+
             Divider()
 
             Button("Quit") {
