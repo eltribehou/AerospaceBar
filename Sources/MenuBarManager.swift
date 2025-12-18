@@ -1,6 +1,23 @@
 import AppKit
 import SwiftUI
 
+// Callback function for AXObserver (must be at top level, outside class)
+private func axObserverCallback(
+    observer: AXObserver,
+    element: AXUIElement,
+    notificationName: CFString,
+    userData: UnsafeMutableRawPointer?
+) {
+    guard let userData = userData else { return }
+
+    let manager = Unmanaged<MenuBarManager>.fromOpaque(userData).takeUnretainedValue()
+
+    // Check fullscreen state when window resizes or focus changes
+    DispatchQueue.main.async {
+        manager.checkAndUpdateMenuBarVisibility()
+    }
+}
+
 class MenuBarManager: ObservableObject {
     private var window: NSWindow?
     private let aerospaceClient: AerospaceClient
@@ -19,6 +36,9 @@ class MenuBarManager: ObservableObject {
     @Published var appsPerWorkspace: [String: [AppInfo]] = [:]
     @Published var currentMode: String?  // Current Aerospace keybind mode (nil if mode-command not configured)
     @Published var currentAudioDevice: AudioDeviceInfo?  // Current audio output device
+
+    private var appObserver: AXObserver?
+    private var currentObservedPID: pid_t?
 
     init() {
         let config = Config.load()
@@ -61,11 +81,20 @@ class MenuBarManager: ObservableObject {
             name: NSApplication.didChangeScreenParametersNotification,
             object: nil
         )
+
+        // Listen for application switches
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(handleApplicationDidActivate),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
     }
 
     deinit {
         DistributedNotificationCenter.default().removeObserver(self)
         NotificationCenter.default.removeObserver(self)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
     }
 
     @objc private func handleRefreshWindowsNotification() {
@@ -154,6 +183,120 @@ class MenuBarManager: ObservableObject {
         window.setFrame(newFrame, display: true, animate: false)
     }
 
+    @objc private func handleApplicationDidActivate(_ notification: Notification) {
+        // When user switches apps, check if new app's focused window is fullscreen
+        checkAndUpdateMenuBarVisibility()
+
+        // Set up AXObserver for the new frontmost app
+        setupObserverForFrontmostApp()
+    }
+
+    private func setupObserverForFrontmostApp() {
+        guard let frontmostApp = NSWorkspace.shared.frontmostApplication else {
+            return
+        }
+
+        let pid = frontmostApp.processIdentifier
+
+        // If we're already observing this app, skip
+        if currentObservedPID == pid {
+            return
+        }
+
+        // Clean up previous observer
+        if let observer = appObserver {
+            CFRunLoopRemoveSource(
+                CFRunLoopGetCurrent(),
+                AXObserverGetRunLoopSource(observer),
+                .defaultMode
+            )
+            appObserver = nil
+        }
+
+        // Create new observer
+        var observer: AXObserver?
+        let error = AXObserverCreate(pid, axObserverCallback, &observer)
+
+        guard error == .success, let observer = observer else {
+            return
+        }
+
+        self.appObserver = observer
+        self.currentObservedPID = pid
+
+        // Get the frontmost app element
+        let appElement = AXUIElementCreateApplication(pid)
+
+        // Register for window resize notifications (includes fullscreen toggle)
+        AXObserverAddNotification(
+            observer,
+            appElement,
+            kAXWindowResizedNotification as CFString,
+            UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
+        )
+
+        // Register for focused window change notifications
+        AXObserverAddNotification(
+            observer,
+            appElement,
+            kAXFocusedWindowChangedNotification as CFString,
+            UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())
+        )
+
+        // Add observer to run loop
+        CFRunLoopAddSource(
+            CFRunLoopGetCurrent(),
+            AXObserverGetRunLoopSource(observer),
+            .defaultMode
+        )
+    }
+
+    fileprivate func checkAndUpdateMenuBarVisibility() {
+        let isFullscreen = isFrontmostWindowFullscreen()
+
+        if isFullscreen {
+            if window?.isVisible == true {
+                window?.orderOut(nil)
+            }
+        } else {
+            if window?.isVisible == false {
+                window?.makeKeyAndOrderFront(nil)
+            }
+        }
+    }
+
+    private func isFrontmostWindowFullscreen() -> Bool {
+        // Get the frontmost application
+        guard let frontmostApp = NSWorkspace.shared.frontmostApplication else {
+            return false
+        }
+
+        // Create AXUIElement for the application
+        let appElement = AXUIElementCreateApplication(frontmostApp.processIdentifier)
+
+        // Get the focused window
+        var focusedWindow: AnyObject?
+        let result = AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &focusedWindow)
+
+        guard result == .success, let windowElement = focusedWindow else {
+            return false
+        }
+
+        // Check for AXFullScreen attribute
+        var fullscreenValue: AnyObject?
+        let fullscreenResult = AXUIElementCopyAttributeValue(
+            windowElement as! AXUIElement,
+            "AXFullScreen" as CFString,
+            &fullscreenValue
+        )
+
+        if fullscreenResult == .success, let isFullscreen = fullscreenValue as? Bool {
+            return isFullscreen
+        }
+
+        return false
+    }
+
     func setup() {
         // Get initial workspaces, mode, and audio (no debouncing on startup - need immediate state)
         DebugLogger.log("App startup - performing initial workspace, mode, and audio refresh")
@@ -166,6 +309,12 @@ class MenuBarManager: ObservableObject {
 
         // Create initial window
         createWindow()
+
+        // Set up observer for current frontmost app
+        setupObserverForFrontmostApp()
+
+        // Do initial fullscreen check
+        checkAndUpdateMenuBarVisibility()
     }
 
     private func createWindow() {
@@ -253,6 +402,17 @@ class MenuBarManager: ObservableObject {
     }
 
     func teardown() {
+        // Clean up AXObserver
+        if let observer = appObserver {
+            CFRunLoopRemoveSource(
+                CFRunLoopGetCurrent(),
+                AXObserverGetRunLoopSource(observer),
+                .defaultMode
+            )
+            appObserver = nil
+        }
+        currentObservedPID = nil
+
         audioClient.stopListening()
         window?.close()
         window = nil
