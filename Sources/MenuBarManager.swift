@@ -259,7 +259,7 @@ class MenuBarManager: ObservableObject {
         // If the feature is disabled, always show the menubar
         guard hideOnFullscreenApps else {
             if window?.isVisible == false {
-                window?.makeKeyAndOrderFront(nil)
+                showWindow()
             }
             return
         }
@@ -272,8 +272,22 @@ class MenuBarManager: ObservableObject {
             }
         } else {
             if window?.isVisible == false {
-                window?.makeKeyAndOrderFront(nil)
+                showWindow()
             }
+        }
+    }
+
+    private func showWindow() {
+        guard let window = window else { return }
+
+        // If allowSystemMenubarOnTop is enabled, we need to temporarily set to .statusBar
+        // to ensure the window can occupy the notch area, then switch back to .floating
+        if allowSystemMenubarOnTop {
+            window.level = .statusBar
+            window.makeKeyAndOrderFront(nil)
+            window.level = .floating
+        } else {
+            window.makeKeyAndOrderFront(nil)
         }
     }
 
