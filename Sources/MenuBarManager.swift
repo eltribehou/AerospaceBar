@@ -372,13 +372,19 @@ class MenuBarManager: ObservableObject {
         window?.backgroundColor = .clear  // Let SwiftUI handle the background with opacity
         window?.isOpaque = false
 
-        // Set window level based on allowSystemMenubarOnTop setting
-        // .floating: above apps, below system menubar (allows system menubar on top)
-        // .statusBar: at system menubar level (current behavior)
-        window?.level = allowSystemMenubarOnTop ? .floating : .statusBar
+        // IMPORTANT: Always create window at .statusBar level first
+        // Only .statusBar level (or higher) windows can occupy the notch area on newer Macs
+        // We'll change to .floating after creation if allowSystemMenubarOnTop is enabled
+        window?.level = .statusBar
 
         window?.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle, .fullScreenAuxiliary]
         window?.makeKeyAndOrderFront(nil)
+
+        // Now change to .floating if requested
+        // This allows the window to stay in the notch area while letting the system menubar appear on top
+        if allowSystemMenubarOnTop {
+            window?.level = .floating
+        }
     }
 
     private func calculateWindowFrame(for screen: NSScreen, position: BarPosition, size: CGFloat) -> NSRect {
