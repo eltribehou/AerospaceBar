@@ -158,33 +158,53 @@ class MenuBarManager: ObservableObject {
     }
 
     @objc private func handleScreenParametersChange() {
-        guard let screen = NSScreen.main, let window = window else {
+        guard let window = window else {
             return
         }
 
-        // Resolve position and size for the current main display
-        let newPosition = config.barPosition.resolve(for: screen)
-        let newSize = config.barSize.resolve(for: screen)
+        // Add a small delay to allow screen parameters to fully update
+        // This is especially important when unplugging external displays
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self, let screen = NSScreen.main else {
+                return
+            }
 
-        // Check if position or size changed
-        let positionChanged = currentBarPosition != newPosition
-        let sizeChanged = abs(currentBarSize - newSize) > 0.01  // Float comparison with epsilon
+            // Resolve position and size for the current main display
+            let newPosition = self.config.barPosition.resolve(for: screen)
+            let newSize = self.config.barSize.resolve(for: screen)
 
-        if !positionChanged && !sizeChanged {
-            return
+            // Check if position or size changed
+            let positionChanged = self.currentBarPosition != newPosition
+            let sizeChanged = abs(self.currentBarSize - newSize) > 0.01  // Float comparison with epsilon
+
+            if !positionChanged && !sizeChanged {
+                return
+            }
+
+            // Update position and/or size (triggers SwiftUI re-render via @Published)
+            if positionChanged {
+                self.currentBarPosition = newPosition
+            }
+            if sizeChanged {
+                self.currentBarSize = newSize
+            }
+
+            // Update window frame for new position and/or size
+            let newFrame = self.calculateWindowFrame(for: screen, position: newPosition, size: newSize)
+
+            // If allowSystemMenubarOnTop is enabled, temporarily set to .statusBar level
+            // to ensure window can properly occupy the notch area after display changes
+            if self.allowSystemMenubarOnTop {
+                window.level = .statusBar
+            }
+
+            window.setFrame(newFrame, display: true, animate: false)
+
+            // Switch back to .floating if needed
+            if self.allowSystemMenubarOnTop {
+                window.level = .floating
+            }
         }
-
-        // Update position and/or size (triggers SwiftUI re-render via @Published)
-        if positionChanged {
-            currentBarPosition = newPosition
-        }
-        if sizeChanged {
-            currentBarSize = newSize
-        }
-
-        // Update window frame for new position and/or size
-        let newFrame = calculateWindowFrame(for: screen, position: newPosition, size: newSize)
-        window.setFrame(newFrame, display: true, animate: false)
     }
 
     @objc private func handleApplicationDidActivate(_ notification: Notification) {
